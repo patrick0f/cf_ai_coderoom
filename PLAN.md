@@ -191,12 +191,16 @@ interface Message {
 ### Phase 1 — Cloudflare Scaffolding (0.5–1 day)
 **Goal**: Deployable "hello world" frontend + backend.
 
-- [ ] Create Pages frontend (Vite/React)
-- [ ] Create Worker API project
-- [ ] Wire Pages → Worker
-- [ ] Add health endpoint `GET /api/health`
+- [x] Create Pages frontend (Vite/React)
+- [x] Create Worker API project
+- [x] Wire Pages → Worker (via Pages Functions proxy)
+- [x] Add health endpoint `GET /api/health`
 
 **Acceptance**: Deployed Pages shows UI; Worker responds; README updated.
+
+**Deployed:**
+- Frontend: https://coderoom.pages.dev
+- Worker: https://coderoom-worker.pfung5423.workers.dev
 
 ### Phase 2 — Durable Object RoomState (1 day)
 **Goal**: Rooms + persistent state with bounded message log.

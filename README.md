@@ -53,7 +53,7 @@ cf_ai_coderoom/
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/cf_ai_coderoom.git
+git clone https://github.com/patrick0f/cf_ai_coderoom.git
 cd cf_ai_coderoom
 
 # Install dependencies
@@ -66,7 +66,9 @@ npm run dev:frontend
 npm run dev:worker
 ```
 
-<!-- TODO: Add actual ports and URLs once scaffolding is complete -->
+Local dev runs at:
+- Frontend: http://localhost:5173
+- Worker: http://localhost:8787
 
 ### Deployment
 
@@ -74,15 +76,17 @@ npm run dev:worker
 # Deploy the worker
 npm run deploy:worker
 
-# Deploy the frontend
-npm run deploy:frontend
+# Deploy the frontend (from frontend/ directory)
+cd frontend && npm run build && npx wrangler pages deploy dist --project-name=coderoom
 ```
 
-<!-- TODO: Add deployed URL once live -->
+**Deployed URLs:**
+- Frontend: https://coderoom.pages.dev
+- Worker API: https://coderoom-worker.pfung5423.workers.dev
 
 ## Try It (2 Minutes)
 
-1. **Visit**: [deployed-url-placeholder](#)
+1. **Visit**: [coderoom.pages.dev](https://coderoom.pages.dev)
 2. **Create a room** or use the default one
 3. **Paste some code** in the code panel
 4. **Ask a question** like "What does this code do?" or "Any bugs here?"
@@ -124,7 +128,7 @@ npm run deploy:frontend
 ## Development Phases
 
 - [x] **Phase 0**: Repo setup, documentation structure
-- [ ] **Phase 1**: Cloudflare scaffolding (hello world)
+- [x] **Phase 1**: Cloudflare scaffolding (hello world)
 - [ ] **Phase 2**: Durable Object RoomState
 - [ ] **Phase 3**: LLM integration (Workers AI)
 - [ ] **Phase 4**: Memory distillation workflow
