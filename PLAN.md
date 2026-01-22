@@ -1,0 +1,261 @@
+# CodeRoom - Detailed Project Plan
+
+This document contains the full implementation plan and architecture details for the CodeRoom project.
+
+## Project Overview
+
+Cloudflare is basically asking: "Can you build a real AI-powered app on Cloudflare that demonstrates you understand full-stack + distributed systems primitives?"
+
+They're explicitly looking for evidence that you can:
+- Integrate an LLM
+- Design coordination / multi-step processing
+- Build a real UI (chat or voice)
+- Manage memory/state properly (not just a stateless demo)
+- Document it so a reviewer can try it quickly
+
+## Requirements (mapped to what we'll build)
+
+### LLM
+- **Plan**: Workers AI with a model like Llama
+- **Deliverable**: Assistant can answer questions about pasted code, propose changes, generate tests, etc.
+
+### Workflow / Coordination
+- **Plan**: Cloudflare Workflows (or DO orchestration) to run background tasks:
+  - Rolling summary ("memory distillation")
+  - Optional deeper "review pass" on demand
+  - TODO extraction
+- **Deliverable**: Demonstrate at least one non-trivial multi-step pipeline
+
+### User Input via Chat or Voice
+- **Plan**: Cloudflare Pages for UI + chat input
+- **Optional**: Add Realtime for streaming/presence later
+
+### Memory or State
+- **Plan**: Durable Object per room to store canonical state:
+  - Messages (bounded)
+  - Rolling summary
+  - Pinned preferences
+  - Artifacts (last review report, TODOs)
+
+### Repo Constraints
+- Repo name must start with `cf_ai_`
+- Must include README.md with clear run instructions (local + deployed link)
+- Must include PROMPTS.md with AI prompts used
+- Must be original work
+
+---
+
+## Core Value Proposition
+
+A web app where you can create a room, paste code, ask questions, and get:
+- Streaming-ish assistant responses
+- A persistent room memory that influences future answers
+- A background review/summarization pipeline that updates artifacts in the UI
+
+---
+
+## Tech Stack (Cloudflare-native)
+
+### Frontend
+- Cloudflare Pages hosting a React/Vite UI
+- Chat UI + "code paste" panel + artifacts panel (Summary / TODOs / Review)
+
+### Backend
+- Cloudflare Worker as API + LLM gateway
+- Workers AI for model inference
+
+### State
+- Durable Objects (DO) as the authoritative state per room
+
+### Coordination
+- Cloudflare Workflows for background multi-step processing
+
+### Optional "Wow" Layer
+- Cloudflare Realtime for presence, live updates, token streaming
+
+---
+
+## Scope Definition
+
+### In Scope (MVP)
+- Single-user rooms (one browser session per room, enforced)
+- Chat + code paste
+- LLM responses
+- Memory (rolling summary + last N messages)
+- One workflow: "post-message processor" that updates summary + TODOs
+- One workflow action: "deep review" button that generates review report
+
+### Out of Scope (avoid time sink)
+- Full code editor IDE
+- Automatic patch application
+- OAuth / user accounts
+- Vector search / embeddings
+- Complex multi-agent browsing/research
+
+---
+
+## Architecture (Single-User MVP)
+
+### High-Level Flow
+1. User loads `/{roomId}`
+2. UI fetches room snapshot from DO
+3. User sends message / code
+4. Worker validates request and forwards to DO
+5. DO appends message, updates state, returns canonical seq
+6. Worker calls Workers AI to generate assistant response
+7. DO stores assistant response + triggers Workflow for background processing
+8. UI refreshes artifacts (poll or fetch after each send)
+
+### ASCII Diagram
+```
+Pages (UI) → Worker API → Durable Object (RoomState) → Workers AI
+                              ↓
+                    triggers Workflows → updates DO artifacts
+                              ↓
+              UI reads snapshot/artifacts from DO (polling in MVP)
+```
+
+### Data Model (Durable Object)
+
+```typescript
+interface RoomState {
+  roomId: string;
+  createdAt: number;
+  mode: "single_user" | "multi_user";
+  ownerClientId: string;
+  messages: Message[];  // bounded
+  rollingSummary: string;
+  pinnedPreferences: string;
+  artifacts: {
+    lastReview: { ts: number; content: string; inputHash: string } | null;
+    todos: { ts: number; items: string[] } | null;
+    notes: string;
+  };
+  limits: {
+    maxMessages: number;
+    maxCharsPerMessage: number;
+  };
+}
+
+interface Message {
+  seq: number;
+  role: "user" | "assistant";
+  content: string;
+  ts: number;
+  clientId?: string;
+  metadata?: Record<string, unknown>;
+}
+```
+
+---
+
+## API Surface (Worker Routes)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/rooms` | Creates a new room, returns `{ roomId, joinUrl }` |
+| GET | `/api/rooms/:roomId/snapshot` | Returns messages, rollingSummary, artifacts, preferences |
+| POST | `/api/rooms/:roomId/message` | Send message, returns `{ seq, assistantMessage, artifacts? }` |
+| POST | `/api/rooms/:roomId/review` | Forces deep review workflow, returns `{ accepted, jobId? }` |
+| POST | `/api/rooms/:roomId/reset` | Clears messages/summary/artifacts |
+
+**ClientId**: Generated on frontend, stored in localStorage.
+
+---
+
+## Prompting Strategy
+
+### A) Runtime System Prompt (for the app)
+- Sets role: pair programmer
+- Forces structured output for review mode
+- Enforces constraints: "Don't invent files; ask clarifying questions when needed; prefer minimal diffs."
+
+### B) Development Prompts (recorded in PROMPTS.md)
+- Log of prompts used to design, scaffold, debug, etc.
+
+---
+
+## MVP Roadmap
+
+### Phase 0 — Repo + Compliance Setup (0.5 day)
+**Goal**: Satisfy submission constraints early.
+
+- [x] Create repo named `cf_ai_coderoom`
+- [x] Add README.md skeleton
+- [x] Add PROMPTS.md
+- [x] Add .gitignore
+- [x] Decide: TypeScript Worker + React frontend
+
+**Acceptance**: Repo exists, named correctly, docs placeholders present.
+
+### Phase 1 — Cloudflare Scaffolding (0.5–1 day)
+**Goal**: Deployable "hello world" frontend + backend.
+
+- [ ] Create Pages frontend (Vite/React)
+- [ ] Create Worker API project
+- [ ] Wire Pages → Worker
+- [ ] Add health endpoint `GET /api/health`
+
+**Acceptance**: Deployed Pages shows UI; Worker responds; README updated.
+
+### Phase 2 — Durable Object RoomState (1 day)
+**Goal**: Rooms + persistent state with bounded message log.
+
+- [ ] Implement DO RoomState
+- [ ] Implement `POST /api/rooms`
+- [ ] Implement `GET snapshot`
+- [ ] Implement `POST message`
+- [ ] Add single-user enforcement
+
+**Acceptance**: Refresh page and history persists; second browser blocked.
+
+### Phase 3 — LLM Integration (Workers AI) (1 day)
+**Goal**: Responses generated with context.
+
+- [ ] Implement Workers AI call
+- [ ] Build context (system prompt + summary + messages + input)
+- [ ] Store assistant response in DO
+- [ ] Add guardrails (max input, timeouts, output cap)
+
+**Acceptance**: Assistant responds consistently; memory included.
+
+### Phase 4 — Memory Distillation Workflow (1–1.5 days)
+**Goal**: Show "workflow/coordination" clearly.
+
+- [ ] Create Workflow: PostMessageProcessor
+- [ ] Steps: fetch snapshot → generate summary → extract TODOs → write back
+- [ ] Trigger workflow from Worker/DO
+- [ ] UI polls snapshot for updated artifacts
+
+**Acceptance**: After messages, summary panel updates and influences answers.
+
+### Phase 5 — "Deep Review" Mode (1 day)
+**Goal**: Serious feature beyond just chat.
+
+- [ ] Add "Review" button in UI
+- [ ] `POST /api/rooms/:roomId/review` triggers workflow
+- [ ] Produce structured report (issues, edge cases, refactor, test plan)
+- [ ] Store and display `artifacts.lastReview`
+
+**Acceptance**: Clicking Review produces structured report.
+
+### Phase 6 — Polish + Demo Hardening (0.5–1 day)
+**Goal**: Reduce flakiness; easy to evaluate.
+
+- [ ] Add "Reset room" button
+- [ ] Add "Copy room link" + "Copy last review"
+- [ ] Add basic rate limiting
+- [ ] Add logs for key events
+- [ ] Tighten README with "Try it in 2 minutes" section
+
+**Acceptance**: Stranger can run locally or use deployed link without confusion.
+
+---
+
+## Optional: Multi-User Rooms
+
+See full details in original planning document. Key additions:
+- Allow multiple clientIds
+- Track presence and usernames
+- Message ordering + resync
+- Optional Cloudflare Realtime for live updates
