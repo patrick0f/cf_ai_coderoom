@@ -129,7 +129,7 @@ cd frontend && npm run build && npx wrangler pages deploy dist --project-name=co
 
 - [x] **Phase 0**: Repo setup, documentation structure
 - [x] **Phase 1**: Cloudflare scaffolding (hello world)
-- [ ] **Phase 2**: Durable Object RoomState
+- [x] **Phase 2**: Durable Object RoomState
 - [ ] **Phase 3**: LLM integration (Workers AI)
 - [ ] **Phase 4**: Memory distillation workflow
 - [ ] **Phase 5**: Deep review mode

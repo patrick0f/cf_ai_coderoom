@@ -205,13 +205,19 @@ interface Message {
 ### Phase 2 — Durable Object RoomState (1 day)
 **Goal**: Rooms + persistent state with bounded message log.
 
-- [ ] Implement DO RoomState
-- [ ] Implement `POST /api/rooms`
-- [ ] Implement `GET snapshot`
-- [ ] Implement `POST message`
-- [ ] Add single-user enforcement
+- [x] Implement DO RoomState
+- [x] Implement `POST /api/rooms`
+- [x] Implement `GET snapshot`
+- [x] Implement `POST message`
+- [x] Add single-user enforcement
 
 **Acceptance**: Refresh page and history persists; second browser blocked.
+
+**Completed:**
+- RoomState DO with SQLite-backed storage
+- Full test coverage (28 tests: 15 unit + 13 integration)
+- Limits: maxMessages=30, maxCharsPerMessage=10000
+- Owner enforcement via X-Client-Id header
 
 ### Phase 3 — LLM Integration (Workers AI) (1 day)
 **Goal**: Responses generated with context.
