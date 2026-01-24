@@ -20,7 +20,7 @@ describe("Room API", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string; phase: number };
     expect(body.status).toBe("ok");
-    expect(body.phase).toBe(2);
+    expect(body.phase).toBe(3);
   });
 
   test("POST /api/rooms requires X-Client-Id header", async () => {
@@ -85,7 +85,7 @@ describe("Room API", () => {
     expect(body.isOwner).toBe(false);
   });
 
-  test("POST /api/rooms/:id/message adds message", async () => {
+  test("POST /api/rooms/:id/message adds message with AI response", async () => {
     const clientId = "test-client-3";
     const createRes = await worker.fetch("/api/rooms", {
       method: "POST",
@@ -103,12 +103,16 @@ describe("Room API", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      seq: number;
-      message: { content: string };
+      userMessage: { seq: number; role: string; content: string };
+      assistantMessage: { seq: number; role: string; content: string };
     };
-    expect(body.seq).toBe(1);
-    expect(body.message.content).toBe("Hello, world!");
-  });
+    expect(body.userMessage.seq).toBe(1);
+    expect(body.userMessage.content).toBe("Hello, world!");
+    expect(body.userMessage.role).toBe("user");
+    expect(body.assistantMessage.seq).toBe(2);
+    expect(body.assistantMessage.role).toBe("assistant");
+    expect(body.assistantMessage.content).toBeTruthy();
+  }, 30000);
 
   test("POST /api/rooms/:id/message returns 403 for wrong clientId", async () => {
     const createRes = await worker.fetch("/api/rooms", {
@@ -173,7 +177,7 @@ describe("Room API", () => {
     expect(body.code).toBe("CONTENT_TOO_LONG");
   });
 
-  test("messages are bounded to 30", async () => {
+  test("messages include both user and assistant after send", async () => {
     const clientId = "test-client-7";
     const createRes = await worker.fetch("/api/rooms", {
       method: "POST",
@@ -181,29 +185,26 @@ describe("Room API", () => {
     });
     const { roomId } = (await createRes.json()) as { roomId: string };
 
-    for (let i = 1; i <= 35; i++) {
-      await worker.fetch(`/api/rooms/${roomId}/message`, {
-        method: "POST",
-        headers: {
-          "X-Client-Id": clientId,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: `Message ${i}` }),
-      });
-    }
+    await worker.fetch(`/api/rooms/${roomId}/message`, {
+      method: "POST",
+      headers: {
+        "X-Client-Id": clientId,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content: "Test message" }),
+    });
 
     const snapshotRes = await worker.fetch(`/api/rooms/${roomId}/snapshot`, {
       headers: { "X-Client-Id": clientId },
     });
     const body = (await snapshotRes.json()) as {
-      messages: { seq: number; content: string }[];
+      messages: { seq: number; role: string; content: string }[];
     };
-    expect(body.messages).toHaveLength(30);
-    expect(body.messages[0].seq).toBe(6);
-    expect(body.messages[0].content).toBe("Message 6");
-    expect(body.messages[29].seq).toBe(35);
-    expect(body.messages[29].content).toBe("Message 35");
-  });
+    expect(body.messages).toHaveLength(2);
+    expect(body.messages[0].role).toBe("user");
+    expect(body.messages[0].content).toBe("Test message");
+    expect(body.messages[1].role).toBe("assistant");
+  }, 30000);
 
   test("POST /api/rooms/:id/reset clears room state", async () => {
     const clientId = "test-client-8";

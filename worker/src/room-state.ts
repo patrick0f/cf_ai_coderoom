@@ -36,6 +36,10 @@ export class RoomState implements DurableObject {
         return this.handleReset(request);
       }
 
+      if (request.method === "POST" && path === "/messages-pair") {
+        return this.handleMessagesPair(request);
+      }
+
       return this.errorResponse("Not found", 404);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Internal error";
@@ -150,6 +154,63 @@ export class RoomState implements DurableObject {
     await this.ctx.storage.put(STORAGE_KEY, resetData);
 
     return Response.json({ success: true });
+  }
+
+  private async handleMessagesPair(request: Request): Promise<Response> {
+    const body = (await request.json()) as {
+      userContent: string;
+      assistantContent: string;
+      clientId: string;
+    };
+    const { userContent, assistantContent, clientId } = body;
+
+    if (!clientId) {
+      return this.errorResponse("clientId required", 400, "MISSING_CLIENT_ID");
+    }
+
+    const roomData = await this.ctx.storage.get<RoomData>(STORAGE_KEY);
+    if (!roomData) {
+      return this.errorResponse("Room not found", 404, "ROOM_NOT_FOUND");
+    }
+
+    if (roomData.ownerClientId !== clientId) {
+      return this.errorResponse(
+        "Room owned by another session",
+        403,
+        "NOT_OWNER",
+      );
+    }
+
+    const userValidation = validateMessageContent(userContent);
+    if (!userValidation.valid) {
+      return this.errorResponse(userValidation.error, 400, userValidation.code);
+    }
+
+    const userMessage = createMessage(
+      userContent,
+      "user",
+      roomData.messages,
+      clientId,
+    );
+    const messagesWithUser = [...roomData.messages, userMessage];
+
+    const assistantMessage = createMessage(
+      assistantContent,
+      "assistant",
+      messagesWithUser,
+    );
+
+    roomData.messages = boundMessages(
+      [...messagesWithUser, assistantMessage],
+      LIMITS.maxMessages,
+    );
+
+    await this.ctx.storage.put(STORAGE_KEY, roomData);
+
+    return Response.json({
+      userMessage,
+      assistantMessage,
+    });
   }
 
   private errorResponse(

@@ -11,9 +11,8 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["RoomState"]
 
-# Uncomment when adding Workers AI (Phase 3)
-# [ai]
-# binding = "AI"
+[ai]
+binding = "AI"
 
 # Uncomment when adding Workflows (Phase 4)
 # [[workflows]]

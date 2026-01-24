@@ -1,10 +1,13 @@
-import type { ApiError } from "./types";
+import type { ApiError, RoomSnapshot } from "./types";
+import { buildChatMessages } from "./ai-context";
+import { generateAssistantResponse } from "./ai-handler";
+import { SYSTEM_PROMPT, AI_LIMITS } from "./prompts";
 
 export { RoomState } from "./room-state";
 
 export interface Env {
   ROOM_STATE: DurableObjectNamespace;
-  // AI: Ai;  // Phase 3
+  AI: Ai;
 }
 
 const CLIENT_ID_HEADER = "X-Client-Id";
@@ -23,7 +26,7 @@ export default {
       return Response.json({
         status: "ok",
         timestamp: new Date().toISOString(),
-        phase: 2,
+        phase: 3,
       });
     }
 
@@ -107,11 +110,51 @@ async function handleRoomAction(
     }
 
     const body = (await request.json()) as { content?: string };
+    const userContent = body.content || "";
+
+    const snapshotRes = await stub.fetch(
+      new Request(
+        `http://do/snapshot?clientId=${encodeURIComponent(clientId)}`,
+        { method: "GET" },
+      ),
+    );
+
+    if (!snapshotRes.ok) {
+      return snapshotRes;
+    }
+
+    const snapshot = (await snapshotRes.json()) as RoomSnapshot;
+
+    if (!snapshot.isOwner) {
+      return errorResponse("Room owned by another session", 403, "NOT_OWNER");
+    }
+
+    const aiMessages = buildChatMessages(
+      SYSTEM_PROMPT,
+      snapshot.rollingSummary,
+      snapshot.messages,
+      AI_LIMITS.maxContextChars,
+    );
+    aiMessages.push({ role: "user", content: userContent });
+
+    let assistantContent: string;
+    try {
+      assistantContent = await generateAssistantResponse(env.AI, aiMessages);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "AI generation failed";
+      return errorResponse(message, 500, "AI_ERROR");
+    }
+
     return stub.fetch(
-      new Request("http://do/message", {
+      new Request("http://do/messages-pair", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: body.content, clientId }),
+        body: JSON.stringify({
+          userContent,
+          assistantContent,
+          clientId,
+        }),
       }),
     );
   }

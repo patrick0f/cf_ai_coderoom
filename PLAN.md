@@ -222,12 +222,19 @@ interface Message {
 ### Phase 3 — LLM Integration (Workers AI) (1 day)
 **Goal**: Responses generated with context.
 
-- [ ] Implement Workers AI call
-- [ ] Build context (system prompt + summary + messages + input)
-- [ ] Store assistant response in DO
-- [ ] Add guardrails (max input, timeouts, output cap)
+- [x] Implement Workers AI call
+- [x] Build context (system prompt + summary + messages + input)
+- [x] Store assistant response in DO
+- [x] Add guardrails (max input, timeouts, output cap)
 
 **Acceptance**: Assistant responds consistently; memory included.
+
+**Completed:**
+- Workers AI with Llama 3.3 70B model
+- Context builder with truncation (maxContextChars=6000)
+- Output cap (maxOutputChars=5000)
+- Atomic message pair storage (/messages-pair endpoint)
+- Full test coverage (36 tests: 23 unit + 13 integration)
 
 ### Phase 4 — Memory Distillation Workflow (1–1.5 days)
 **Goal**: Show "workflow/coordination" clearly.

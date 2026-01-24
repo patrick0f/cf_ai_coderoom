@@ -1,33 +1,4 @@
-# PROMPTS.md
-
-This document logs AI prompts used during the development of CodeRoom.
-
----
-
-## Development Prompts
-
-### Phase 0 - Project Setup
-
-**Prompt 1: Initial Planning & Structure**
-```
-Context: Starting a Cloudflare AI challenge project
-Task: Set up monorepo structure for a realtime pair programming app
-
-Asked Claude to:
-- Explain monorepo vs separate projects pros/cons
-- Create clean README with placeholders
-- Move detailed plan to PLAN.md
-- Set up TypeScript Worker + React/Vite frontend structure
-```
-
----
-
-## Runtime Prompts (Used in the Application)
-
-### System Prompt - Pair Programmer
-
-```
-You are a pair-programming assistant. Your job is to help the user understand, debug, and improve THEIR code.
+export const SYSTEM_PROMPT = `You are a pair-programming assistant. Your job is to help the user understand, debug, and improve THEIR code.
 
 Operating constraints (read carefully):
 - You only know what the user tells you or pastes. You cannot see their repository, files, environment, logs, or run code.
@@ -78,31 +49,9 @@ C) "Implement X" format:
 
 Safety & security:
 - Never request or output secrets (API keys, tokens). If shown, advise rotating them.
-- Call out obvious vulnerabilities (injection, auth bypass, unsafe eval, insecure CORS, etc.) when relevant.
-```
+- Call out obvious vulnerabilities (injection, auth bypass, unsafe eval, insecure CORS, etc.) when relevant.`;
 
-**Location:** `worker/src/prompts.ts`
-
-### System Prompt - Code Review Mode
-
-```
-<!-- TODO: Add the system prompt used for deep code reviews -->
-```
-
-### System Prompt - Summary Generation
-
-```
-<!-- TODO: Add the prompt used by the workflow for generating rolling summaries -->
-```
-
-### System Prompt - TODO Extraction
-
-```
-<!-- TODO: Add the prompt used for extracting TODOs from conversations -->
-```
-
----
-
-## Prompt Design Notes
-
-<!-- TODO: Add notes on prompt engineering decisions, what worked, what didn't -->
+export const AI_LIMITS = {
+  maxContextChars: 6000,
+  maxOutputChars: 5000,
+} as const;
