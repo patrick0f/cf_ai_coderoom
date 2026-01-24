@@ -239,12 +239,19 @@ interface Message {
 ### Phase 4 — Memory Distillation Workflow (1–1.5 days)
 **Goal**: Show "workflow/coordination" clearly.
 
-- [ ] Create Workflow: PostMessageProcessor
-- [ ] Steps: fetch snapshot → generate summary → extract TODOs → write back
-- [ ] Trigger workflow from Worker/DO
-- [ ] UI polls snapshot for updated artifacts
+- [x] Create Workflow: PostMessageProcessor
+- [x] Steps: fetch snapshot → generate summary → extract TODOs → write back
+- [x] Trigger workflow from Worker/DO
+- [x] UI polls snapshot for updated artifacts
 
 **Acceptance**: After messages, summary panel updates and influences answers.
+
+**Completed:**
+- Cloudflare Workflow with 4 durable steps
+- Pure logic functions with 15 unit tests
+- DO `/artifacts` endpoint for workflow to write back
+- Fire-and-forget trigger via ctx.waitUntil
+- Summary + TODO prompts documented in PROMPTS.md
 
 ### Phase 5 — "Deep Review" Mode (1 day)
 **Goal**: Serious feature beyond just chat.

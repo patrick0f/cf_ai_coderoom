@@ -40,6 +40,10 @@ export class RoomState implements DurableObject {
         return this.handleMessagesPair(request);
       }
 
+      if (request.method === "POST" && path === "/artifacts") {
+        return this.handleUpdateArtifacts(request);
+      }
+
       return this.errorResponse("Not found", 404);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Internal error";
@@ -211,6 +215,34 @@ export class RoomState implements DurableObject {
       userMessage,
       assistantMessage,
     });
+  }
+
+  private async handleUpdateArtifacts(request: Request): Promise<Response> {
+    const body = (await request.json()) as {
+      rollingSummary?: string;
+      todos?: string[];
+    };
+    const { rollingSummary, todos } = body;
+
+    const roomData = await this.ctx.storage.get<RoomData>(STORAGE_KEY);
+    if (!roomData) {
+      return this.errorResponse("Room not found", 404, "ROOM_NOT_FOUND");
+    }
+
+    if (rollingSummary !== undefined) {
+      roomData.rollingSummary = rollingSummary;
+    }
+
+    if (todos !== undefined) {
+      roomData.artifacts.todos = {
+        ts: Date.now(),
+        items: todos,
+      };
+    }
+
+    await this.ctx.storage.put(STORAGE_KEY, roomData);
+
+    return Response.json({ success: true });
   }
 
   private errorResponse(

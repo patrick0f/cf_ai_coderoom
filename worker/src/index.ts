@@ -4,11 +4,7 @@ import { generateAssistantResponse } from "./ai-handler";
 import { SYSTEM_PROMPT, AI_LIMITS } from "./prompts";
 
 export { RoomState } from "./room-state";
-
-export interface Env {
-  ROOM_STATE: DurableObjectNamespace;
-  AI: Ai;
-}
+export { PostMessageProcessor } from "./workflows/post-message-processor";
 
 const CLIENT_ID_HEADER = "X-Client-Id";
 
@@ -16,7 +12,7 @@ export default {
   async fetch(
     request: Request,
     env: Env,
-    _ctx: ExecutionContext,
+    ctx: ExecutionContext,
   ): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -26,7 +22,7 @@ export default {
       return Response.json({
         status: "ok",
         timestamp: new Date().toISOString(),
-        phase: 3,
+        phase: 4,
       });
     }
 
@@ -37,7 +33,7 @@ export default {
     const roomMatch = path.match(/^\/api\/rooms\/([^/]+)\/(.+)$/);
     if (roomMatch) {
       const [, roomId, action] = roomMatch;
-      return handleRoomAction(request, env, roomId, action);
+      return handleRoomAction(request, env, ctx, roomId, action);
     }
 
     return errorResponse("Not found", 404);
@@ -82,6 +78,7 @@ async function handleCreateRoom(request: Request, env: Env): Promise<Response> {
 async function handleRoomAction(
   request: Request,
   env: Env,
+  ctx: ExecutionContext,
   roomId: string,
   action: string,
 ): Promise<Response> {
@@ -146,7 +143,7 @@ async function handleRoomAction(
       return errorResponse(message, 500, "AI_ERROR");
     }
 
-    return stub.fetch(
+    const storeRes = await stub.fetch(
       new Request("http://do/messages-pair", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -157,6 +154,17 @@ async function handleRoomAction(
         }),
       }),
     );
+
+    if (storeRes.ok) {
+      ctx.waitUntil(
+        env.POST_MESSAGE_WORKFLOW.create({
+          id: `${roomId}-${Date.now()}`,
+          params: { roomId },
+        }),
+      );
+    }
+
+    return storeRes;
   }
 
   if (request.method === "POST" && action === "reset") {
