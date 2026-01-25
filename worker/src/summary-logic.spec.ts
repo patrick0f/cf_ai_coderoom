@@ -182,9 +182,18 @@ describe("parseTodosFromResponse", () => {
 
     const result = parseTodosFromResponse(response);
 
-    expect(result).toHaveLength(10);
-    expect(result[0]).toBe("Item 1");
-    expect(result[9]).toBe("Item 10");
+    expect(result).toEqual([
+      "Item 1",
+      "Item 2",
+      "Item 3",
+      "Item 4",
+      "Item 5",
+      "Item 6",
+      "Item 7",
+      "Item 8",
+      "Item 9",
+      "Item 10",
+    ]);
   });
 
   test("handles response with surrounding text", () => {
@@ -196,10 +205,45 @@ describe("parseTodosFromResponse", () => {
     expect(result).toEqual(["Fix bug", "Add tests"]);
   });
 
-  test("returns empty array for non-string input", () => {
+  test("returns empty array for non-string non-array input", () => {
     expect(parseTodosFromResponse(null)).toEqual([]);
     expect(parseTodosFromResponse(undefined)).toEqual([]);
     expect(parseTodosFromResponse(123)).toEqual([]);
     expect(parseTodosFromResponse({ key: "value" })).toEqual([]);
+  });
+
+  test("handles array input directly (model returns parsed array)", () => {
+    const response = ["Fix the bug", "Add tests", "Update docs"];
+
+    const result = parseTodosFromResponse(response);
+
+    expect(result).toEqual(["Fix the bug", "Add tests", "Update docs"]);
+  });
+
+  test("filters non-strings from array input", () => {
+    const response = ["valid", 123, "also valid", null, { obj: true }];
+
+    const result = parseTodosFromResponse(response);
+
+    expect(result).toEqual(["valid", "also valid"]);
+  });
+
+  test("limits array input to 10 items", () => {
+    const response = Array.from({ length: 15 }, (_, i) => `Item ${i + 1}`);
+
+    const result = parseTodosFromResponse(response);
+
+    expect(result).toEqual([
+      "Item 1",
+      "Item 2",
+      "Item 3",
+      "Item 4",
+      "Item 5",
+      "Item 6",
+      "Item 7",
+      "Item 8",
+      "Item 9",
+      "Item 10",
+    ]);
   });
 });

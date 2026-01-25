@@ -49,6 +49,13 @@ export function buildTodoExtractMessages(
 }
 
 export function parseTodosFromResponse(response: unknown): string[] {
+  if (Array.isArray(response)) {
+    const strings = response.filter(
+      (item): item is string => typeof item === "string",
+    );
+    return strings.slice(0, 10);
+  }
+
   if (typeof response !== "string") {
     return [];
   }
