@@ -286,12 +286,31 @@ interface Message {
 
 **Acceptance**: Stranger can run locally or use deployed link without confusion.
 
----
+### Phase 7 — Realtime Token Streaming (SSE) (0.5–1.5 days)
+**Goal**: Make assistant responses feel realtime by streaming output chunks to the UI, while keeping the Durable Object as the canonical persisted state.
 
-## Optional: Multi-User Rooms
+- [ ] Add `POST /api/rooms/:roomId/message/stream` endpoint with SSE
+- [ ] Implement SSE event protocol (meta, delta, done, error events)
+- [ ] Call Workers AI in streaming mode and forward deltas to client
+- [ ] Persist final assistant message to DO only on completion
+- [ ] Trigger PostMessageProcessor workflow after stream completes
+- [ ] Abort in-flight AI request on client disconnect
+- [ ] Frontend: render streaming "draft bubble" with incremental text
+- [ ] Frontend: add "Stop generating" button to abort stream
+- [ ] Frontend: handle mid-stream errors with partial content + retry
+- [ ] Add guardrails (maxOutputChars=5000) and log streaming metrics
 
-See full details in original planning document. Key additions:
-- Allow multiple clientIds
-- Track presence and usernames
-- Message ordering + resync
-- Optional Cloudflare Realtime for live updates
+**Acceptance**: Assistant response begins rendering within ~1s and streams continuously; refresh shows finalized message in DO; workflow runs only after completion.
+
+### Phase 8 — UI/UX Polishing (0.5–1 day)
+**Goal**: Ensure the interface is smooth, visually polished, and functions well across devices.
+
+- [ ] Visual polish: consistent spacing, typography, transitions
+- [ ] Keyboard shortcuts (Enter to send, Shift+Enter for newline)
+- [ ] Auto-scroll to latest message and focus management
+- [ ] Syntax highlighting for code blocks in messages
+- [ ] Clear error messages with recovery actions
+
+**Acceptance**: UI feels responsive and professional; works well on desktop; no jarring transitions or confusing states.
+
+
