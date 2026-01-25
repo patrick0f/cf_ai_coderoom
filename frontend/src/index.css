@@ -177,6 +177,8 @@ body {
 .artifact p {
   font-size: 0.875rem;
   color: #4b5563;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .artifact ul {

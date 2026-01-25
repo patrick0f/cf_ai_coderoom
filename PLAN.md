@@ -256,7 +256,7 @@ interface Message {
 ### Phase 5 — "Deep Review" Mode (1 day)
 **Goal**: Serious feature beyond just chat.
 
-- [ ] Add "Review" button in UI
+- [x] Add "Review" button in UI
 - [x] `POST /api/rooms/:roomId/review` endpoint
 - [x] Produce structured report (issues, edge cases, refactor, test plan)
 - [x] Store and display `artifacts.lastReview`
@@ -269,6 +269,11 @@ interface Message {
 - Pure logic functions: computeInputHash, buildReviewMessages, parseReviewResponse
 - 18 unit tests for review-logic
 - REVIEW_PROMPT documented in PROMPTS.md
+- Frontend chat UI with message history and input
+- Artifacts sidebar showing Summary, TODOs, and Review results
+- "Run Review" button that calls review endpoint
+- useRoom hook for API calls and client ID management
+- Responsive layout with proper text wrapping
 
 ### Phase 6 — Polish + Demo Hardening (0.5–1 day)
 **Goal**: Reduce flakiness; easy to evaluate.

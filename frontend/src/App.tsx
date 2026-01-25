@@ -57,7 +57,7 @@ function App() {
       <div className="main">
         <div className="chat-panel">
           <div className="messages">
-            {snapshot?.messages.length === 0 && (
+            {snapshot?.messages.length === 0 && !loading && (
               <p className="empty">No messages yet. Start a conversation!</p>
             )}
             {snapshot?.messages.map((msg: Message) => (
@@ -86,7 +86,7 @@ function App() {
         <aside className="artifacts-panel">
           <section className="artifact">
             <h3>Summary</h3>
-            <p>{snapshot?.rollingSummary || "No summary yet"}</p>
+            <p>{snapshot?.rollingSummary?.replace(/^\* /gm, "• ") || "No summary yet"}</p>
           </section>
 
           <section className="artifact">
