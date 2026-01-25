@@ -83,6 +83,17 @@ export function useRoom() {
           throw new Error(data.error || "Failed to send message");
         }
         await fetchSnapshot();
+
+        // Poll for artifact updates from background workflow
+        const pollForArtifacts = async () => {
+          const maxPolls = 5;
+          const pollInterval = 3000;
+          for (let i = 0; i < maxPolls; i++) {
+            await new Promise((r) => setTimeout(r, pollInterval));
+            await fetchSnapshot();
+          }
+        };
+        pollForArtifacts();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
