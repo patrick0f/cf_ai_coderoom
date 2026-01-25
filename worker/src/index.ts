@@ -1,7 +1,12 @@
-import type { ApiError, RoomSnapshot } from "./types";
+import type { ApiError, RoomSnapshot, ReviewReport } from "./types";
 import { buildChatMessages } from "./ai-context";
 import { generateAssistantResponse } from "./ai-handler";
-import { SYSTEM_PROMPT, AI_LIMITS } from "./prompts";
+import { SYSTEM_PROMPT, AI_LIMITS, REVIEW_PROMPT } from "./prompts";
+import {
+  computeInputHash,
+  buildReviewMessages,
+  parseReviewResponse,
+} from "./review-logic";
 
 export { RoomState } from "./room-state";
 export { PostMessageProcessor } from "./workflows/post-message-processor";
@@ -22,7 +27,7 @@ export default {
       return Response.json({
         status: "ok",
         timestamp: new Date().toISOString(),
-        phase: 4,
+        phase: 5,
       });
     }
 
@@ -186,11 +191,79 @@ async function handleRoomAction(
   }
 
   if (request.method === "POST" && action === "review") {
-    return errorResponse(
-      "Review not implemented yet (Phase 5)",
-      501,
-      "NOT_IMPLEMENTED",
+    if (!clientId) {
+      return errorResponse(
+        "X-Client-Id header required",
+        400,
+        "MISSING_CLIENT_ID",
+      );
+    }
+
+    const body = (await request.json()) as { force?: boolean };
+
+    const snapshotRes = await stub.fetch(
+      new Request(
+        `http://do/snapshot?clientId=${encodeURIComponent(clientId)}`,
+        { method: "GET" },
+      ),
     );
+
+    if (!snapshotRes.ok) {
+      return snapshotRes;
+    }
+
+    const snapshot = (await snapshotRes.json()) as RoomSnapshot;
+
+    if (!snapshot.isOwner) {
+      return errorResponse("Room owned by another session", 403, "NOT_OWNER");
+    }
+
+    if (snapshot.messages.length === 0) {
+      return errorResponse("No messages to review", 422, "NO_CONTENT");
+    }
+
+    const inputHash = await computeInputHash(
+      snapshot.messages,
+      snapshot.rollingSummary,
+    );
+
+    const lastReview = snapshot.artifacts.lastReview;
+    if (lastReview && lastReview.inputHash === inputHash && !body.force) {
+      return Response.json({ review: lastReview, cached: true });
+    }
+
+    const aiMessages = buildReviewMessages(
+      REVIEW_PROMPT,
+      snapshot.messages,
+      snapshot.rollingSummary,
+    );
+
+    let reviewContent: string;
+    try {
+      reviewContent = await generateAssistantResponse(env.AI, aiMessages);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "AI generation failed";
+      return errorResponse(message, 500, "AI_ERROR");
+    }
+
+    const report: ReviewReport = parseReviewResponse(reviewContent);
+
+    const review = {
+      ts: Date.now(),
+      content: report,
+      inputHash,
+    };
+
+    await stub.fetch(
+      new Request("http://do/artifacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lastReview: review }),
+      }),
+    );
+
+    return Response.json({ review, cached: false });
   }
 
   return errorResponse("Not found", 404);

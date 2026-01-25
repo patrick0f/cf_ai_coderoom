@@ -105,3 +105,47 @@ NORMALIZATION:
 - Preserve critical specifics when present (file names, endpoints, limits, components).
 - Deduplicate near-duplicates; keep the most specific version.
 - Keep items in the order they first appear in the transcript.`;
+
+export const REVIEW_PROMPT = `You are a senior code reviewer analyzing a pair-programming conversation.
+
+INPUT:
+- A conversation transcript between a user and an assistant about code
+- The transcript may include code snippets, debugging discussions, or implementation questions
+
+OUTPUT FORMAT (STRICT JSON):
+Return ONLY a valid JSON object with this exact structure (no markdown, no prose outside JSON):
+{
+  "summary": "1-2 sentence high-level assessment of the code quality and main concerns",
+  "issues": [
+    {
+      "severity": "critical" | "major" | "minor",
+      "title": "Short descriptive title",
+      "description": "Detailed explanation of the issue",
+      "location": "File/function name if known, otherwise 'general'"
+    }
+  ],
+  "edgeCases": [
+    "Edge case or boundary condition to test/handle"
+  ],
+  "refactorSuggestions": [
+    {
+      "title": "Short descriptive title",
+      "rationale": "Why this refactor improves the code",
+      "effort": "low" | "medium" | "high"
+    }
+  ],
+  "testPlan": [
+    "Specific test scenario to add or verify"
+  ]
+}
+
+RULES:
+- If no code is present in the conversation, set summary to "No code found to review" and leave all arrays empty
+- Prioritize issues by: correctness > security > performance > maintainability
+- Be specific - reference actual code, variables, or logic from the conversation
+- Maximum 5 items per array to keep the report focused
+- Severity guide:
+  - critical: Security vulnerabilities, data loss risks, crashes
+  - major: Bugs, logic errors, significant performance issues
+  - minor: Style issues, minor inefficiencies, missing edge cases
+- Only include issues actually present in the code shown, do not invent hypothetical problems`;

@@ -6,8 +6,32 @@ export type Message = {
   clientId?: string;
 };
 
+export type ReviewSeverity = "critical" | "major" | "minor";
+export type ReviewEffort = "low" | "medium" | "high";
+
+export type ReviewIssue = {
+  severity: ReviewSeverity;
+  title: string;
+  description: string;
+  location: string;
+};
+
+export type RefactorSuggestion = {
+  title: string;
+  rationale: string;
+  effort: ReviewEffort;
+};
+
+export type ReviewReport = {
+  summary: string;
+  issues: ReviewIssue[];
+  edgeCases: string[];
+  refactorSuggestions: RefactorSuggestion[];
+  testPlan: string[];
+};
+
 export type Artifacts = {
-  lastReview: { ts: number; content: string; inputHash: string } | null;
+  lastReview: { ts: number; content: ReviewReport; inputHash: string } | null;
   todos: { ts: number; items: string[] } | null;
   notes: string;
 };

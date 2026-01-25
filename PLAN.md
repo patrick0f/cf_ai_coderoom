@@ -257,11 +257,18 @@ interface Message {
 **Goal**: Serious feature beyond just chat.
 
 - [ ] Add "Review" button in UI
-- [ ] `POST /api/rooms/:roomId/review` triggers workflow
-- [ ] Produce structured report (issues, edge cases, refactor, test plan)
-- [ ] Store and display `artifacts.lastReview`
+- [x] `POST /api/rooms/:roomId/review` endpoint
+- [x] Produce structured report (issues, edge cases, refactor, test plan)
+- [x] Store and display `artifacts.lastReview`
 
 **Acceptance**: Clicking Review produces structured report.
+
+**Completed:**
+- Synchronous review endpoint with input hash caching
+- ReviewReport type with issues, edgeCases, refactorSuggestions, testPlan
+- Pure logic functions: computeInputHash, buildReviewMessages, parseReviewResponse
+- 18 unit tests for review-logic
+- REVIEW_PROMPT documented in PROMPTS.md
 
 ### Phase 6 — Polish + Demo Hardening (0.5–1 day)
 **Goal**: Reduce flakiness; easy to evaluate.

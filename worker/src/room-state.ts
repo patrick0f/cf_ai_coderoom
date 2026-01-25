@@ -1,4 +1,4 @@
-import type { RoomData, RoomSnapshot, ApiError } from "./types";
+import type { RoomData, RoomSnapshot, ApiError, ReviewReport } from "./types";
 import { LIMITS } from "./types";
 import {
   boundMessages,
@@ -221,8 +221,9 @@ export class RoomState implements DurableObject {
     const body = (await request.json()) as {
       rollingSummary?: string;
       todos?: string[];
+      lastReview?: { ts: number; content: ReviewReport; inputHash: string };
     };
-    const { rollingSummary, todos } = body;
+    const { rollingSummary, todos, lastReview } = body;
 
     const roomData = await this.ctx.storage.get<RoomData>(STORAGE_KEY);
     if (!roomData) {
@@ -238,6 +239,10 @@ export class RoomState implements DurableObject {
         ts: Date.now(),
         items: todos,
       };
+    }
+
+    if (lastReview !== undefined) {
+      roomData.artifacts.lastReview = lastReview;
     }
 
     await this.ctx.storage.put(STORAGE_KEY, roomData);
