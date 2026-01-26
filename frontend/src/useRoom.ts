@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import type { RoomSnapshot, ReviewResponse } from "./types";
+import { useState, useCallback, useEffect, useRef } from "react";
+import type { RoomSnapshot, ReviewResponse, SSEEvent } from "./types";
 
 const CLIENT_ID_KEY = "coderoom_client_id";
 
@@ -18,13 +18,16 @@ export function useRoom() {
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streaming, setStreaming] = useState(false);
+  const [draftContent, setDraftContent] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
 
   const headers = useCallback(
     () => ({
       "Content-Type": "application/json",
       "X-Client-Id": clientId,
     }),
-    [clientId]
+    [clientId],
   );
 
   const createRoom = useCallback(async () => {
@@ -89,8 +92,75 @@ export function useRoom() {
         setLoading(false);
       }
     },
-    [roomId, headers, fetchSnapshot]
+    [roomId, headers, fetchSnapshot],
   );
+
+  const sendMessageStream = useCallback(
+    async (content: string) => {
+      if (!roomId) return;
+      setStreaming(true);
+      setDraftContent("");
+      setError(null);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const res = await fetch(`/api/rooms/${roomId}/message/stream`, {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ content }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to stream message");
+        }
+
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop()!;
+
+          for (const eventStr of events) {
+            if (!eventStr.startsWith("data: ")) continue;
+            const event = JSON.parse(eventStr.slice(6)) as SSEEvent;
+
+            if (event.type === "delta") {
+              setDraftContent((prev) => prev + event.content);
+            } else if (event.type === "done") {
+              setDraftContent("");
+              await fetchSnapshot();
+            } else if (event.type === "error") {
+              setError(event.message);
+            }
+          }
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
+      } finally {
+        setStreaming(false);
+        abortRef.current = null;
+      }
+    },
+    [roomId, headers, fetchSnapshot],
+  );
+
+  const stopGenerating = useCallback(() => {
+    abortRef.current?.abort();
+    setStreaming(false);
+    setDraftContent("");
+  }, []);
 
   const requestReview = useCallback(
     async (force = false): Promise<ReviewResponse | null> => {
@@ -117,7 +187,7 @@ export function useRoom() {
         setLoading(false);
       }
     },
-    [roomId, headers, fetchSnapshot]
+    [roomId, headers, fetchSnapshot],
   );
 
   const resetRoom = useCallback(async () => {
@@ -153,8 +223,12 @@ export function useRoom() {
     snapshot,
     loading,
     error,
+    streaming,
+    draftContent,
     createRoom,
     sendMessage,
+    sendMessageStream,
+    stopGenerating,
     requestReview,
     resetRoom,
     fetchSnapshot,

@@ -8,8 +8,11 @@ function App() {
     snapshot,
     loading,
     error,
+    streaming,
+    draftContent,
     createRoom,
-    sendMessage,
+    sendMessageStream,
+    stopGenerating,
     requestReview,
     resetRoom,
   } = useRoom();
@@ -54,10 +57,10 @@ function App() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || streaming) return;
     const content = input;
     setInput("");
-    await sendMessage(content);
+    await sendMessageStream(content);
   };
 
   const handleReview = async () => {
@@ -108,7 +111,16 @@ function App() {
                 <div className="message-content">{msg.content}</div>
               </div>
             ))}
-            {loading && (
+            {streaming && (
+              <div className="message assistant streaming">
+                <div className="message-role">assistant</div>
+                <div className="message-content">
+                  {draftContent}
+                  <span className="cursor">▌</span>
+                </div>
+              </div>
+            )}
+            {loading && !streaming && (
               <div className="message assistant loading">Thinking...</div>
             )}
           </div>
@@ -118,12 +130,22 @@ function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about code, paste snippets, or describe a problem..."
-              disabled={loading}
+              disabled={loading || streaming}
               rows={3}
             />
-            <button type="submit" disabled={loading || !input.trim()}>
-              Send
-            </button>
+            {streaming ? (
+              <button
+                type="button"
+                onClick={stopGenerating}
+                className="btn-stop"
+              >
+                Stop
+              </button>
+            ) : (
+              <button type="submit" disabled={loading || !input.trim()}>
+                Send
+              </button>
+            )}
           </form>
         </div>
 

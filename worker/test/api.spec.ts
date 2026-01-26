@@ -20,7 +20,7 @@ describe("Room API", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string; phase: number };
     expect(body.status).toBe("ok");
-    expect(body.phase).toBe(6);
+    expect(body.phase).toBe(7);
   });
 
   test("POST /api/rooms requires X-Client-Id header", async () => {
@@ -246,6 +246,95 @@ describe("Room API", () => {
     const res = await worker.fetch(`/api/rooms/${roomId}/reset`, {
       method: "POST",
       headers: { "X-Client-Id": "wrong-client" },
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("NOT_OWNER");
+  });
+
+  test("POST /api/rooms/:id/message/stream returns SSE format with events", async () => {
+    const clientId = "test-client-stream-1";
+    const createRes = await worker.fetch("/api/rooms", {
+      method: "POST",
+      headers: { "X-Client-Id": clientId },
+    });
+    const { roomId } = (await createRes.json()) as { roomId: string };
+
+    const res = await worker.fetch(`/api/rooms/${roomId}/message/stream`, {
+      method: "POST",
+      headers: {
+        "X-Client-Id": clientId,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content: "Say hello" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("text/event-stream");
+
+    const text = await res.text();
+    const events = text.split("\n\n").filter((e) => e.startsWith("data:"));
+
+    expect(events.length).toBeGreaterThanOrEqual(2);
+
+    const firstEvent = JSON.parse(events[0].slice(6)) as { type: string };
+    expect(firstEvent.type).toBe("meta");
+
+    const lastEvent = JSON.parse(events[events.length - 1].slice(6)) as {
+      type: string;
+    };
+    expect(["done", "error"]).toContain(lastEvent.type);
+  }, 30000);
+
+  test("POST /api/rooms/:id/message/stream persists message after completion", async () => {
+    const clientId = "test-client-stream-2";
+    const createRes = await worker.fetch("/api/rooms", {
+      method: "POST",
+      headers: { "X-Client-Id": clientId },
+    });
+    const { roomId } = (await createRes.json()) as { roomId: string };
+
+    const streamRes = await worker.fetch(
+      `/api/rooms/${roomId}/message/stream`,
+      {
+        method: "POST",
+        headers: {
+          "X-Client-Id": clientId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: "Test streaming" }),
+      },
+    );
+    await streamRes.text();
+
+    const snapshotRes = await worker.fetch(`/api/rooms/${roomId}/snapshot`, {
+      headers: { "X-Client-Id": clientId },
+    });
+    const body = (await snapshotRes.json()) as {
+      messages: { role: string; content: string }[];
+    };
+
+    expect(body.messages).toHaveLength(2);
+    expect(body.messages[0].role).toBe("user");
+    expect(body.messages[0].content).toBe("Test streaming");
+    expect(body.messages[1].role).toBe("assistant");
+    expect(body.messages[1].content.length).toBeGreaterThan(0);
+  }, 30000);
+
+  test("POST /api/rooms/:id/message/stream returns 403 for wrong clientId", async () => {
+    const createRes = await worker.fetch("/api/rooms", {
+      method: "POST",
+      headers: { "X-Client-Id": "owner-client-stream" },
+    });
+    const { roomId } = (await createRes.json()) as { roomId: string };
+
+    const res = await worker.fetch(`/api/rooms/${roomId}/message/stream`, {
+      method: "POST",
+      headers: {
+        "X-Client-Id": "wrong-client",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content: "Should fail" }),
     });
     expect(res.status).toBe(403);
     const body = (await res.json()) as { code: string };

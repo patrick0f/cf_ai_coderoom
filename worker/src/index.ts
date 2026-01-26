@@ -1,6 +1,8 @@
 import type { ApiError, RoomSnapshot, ReviewReport } from "./types";
 import { buildChatMessages } from "./ai-context";
 import { generateAssistantResponse } from "./ai-handler";
+import { streamAssistantResponse } from "./ai-handler-stream";
+import { formatSSEEvent, createSSEHeaders } from "./sse-logic";
 import { SYSTEM_PROMPT, AI_LIMITS, REVIEW_PROMPT } from "./prompts";
 import {
   computeInputHash,
@@ -31,7 +33,7 @@ export default {
       return Response.json({
         status: "ok",
         timestamp: new Date().toISOString(),
-        phase: 6,
+        phase: 7,
       });
     }
 
@@ -196,6 +198,149 @@ async function handleRoomAction(
     }
 
     return storeRes;
+  }
+
+  if (request.method === "POST" && action === "message/stream") {
+    if (!clientId) {
+      return errorResponse(
+        "X-Client-Id header required",
+        400,
+        "MISSING_CLIENT_ID",
+      );
+    }
+
+    const rateCheck = await checkRateLimitForAction(stub, clientId, "message");
+    if (!rateCheck.allowed) {
+      logEvent("rate.limited", {
+        clientId,
+        endpoint: "message/stream",
+        roomId,
+      });
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded", code: "RATE_LIMITED" }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(rateCheck.retryAfter || 60),
+          },
+        },
+      );
+    }
+
+    const body = (await request.json()) as { content?: string };
+    const userContent = body.content || "";
+
+    const snapshotRes = await stub.fetch(
+      new Request(
+        `http://do/snapshot?clientId=${encodeURIComponent(clientId)}`,
+        { method: "GET" },
+      ),
+    );
+
+    if (!snapshotRes.ok) {
+      return snapshotRes;
+    }
+
+    const snapshot = (await snapshotRes.json()) as RoomSnapshot;
+
+    if (!snapshot.isOwner) {
+      return errorResponse("Room owned by another session", 403, "NOT_OWNER");
+    }
+
+    const aiMessages = buildChatMessages(
+      SYSTEM_PROMPT,
+      snapshot.rollingSummary,
+      snapshot.messages,
+      AI_LIMITS.maxContextChars,
+    );
+    aiMessages.push({ role: "user", content: userContent });
+
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    const nextSeq = snapshot.messages.length + 1;
+
+    ctx.waitUntil(
+      (async () => {
+        const startTime = Date.now();
+        let accumulated = "";
+        let streamError: Error | null = null;
+
+        try {
+          await writer.write(
+            encoder.encode(formatSSEEvent({ type: "meta", seq: nextSeq })),
+          );
+
+          logEvent("stream.started", { roomId, clientId });
+
+          for await (const token of streamAssistantResponse(
+            env.AI,
+            aiMessages,
+            AI_LIMITS.maxOutputChars,
+          )) {
+            accumulated += token;
+            await writer.write(
+              encoder.encode(formatSSEEvent({ type: "delta", content: token })),
+            );
+          }
+
+          await stub.fetch(
+            new Request("http://do/messages-pair", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userContent,
+                assistantContent: accumulated,
+                clientId,
+              }),
+            }),
+          );
+
+          ctx.waitUntil(
+            env.POST_MESSAGE_WORKFLOW.create({
+              id: `${roomId}-${Date.now()}`,
+              params: { roomId },
+            }),
+          );
+
+          const durationMs = Date.now() - startTime;
+          logEvent("stream.completed", {
+            roomId,
+            clientId,
+            totalChars: accumulated.length,
+            durationMs,
+          });
+
+          await writer.write(
+            encoder.encode(
+              formatSSEEvent({ type: "done", totalChars: accumulated.length }),
+            ),
+          );
+        } catch (err) {
+          streamError = err instanceof Error ? err : new Error(String(err));
+          const errorEvent = formatSSEEvent({
+            type: "error",
+            code: "STREAM_ERROR",
+            message: streamError.message,
+            partial: accumulated || undefined,
+          });
+          await writer.write(encoder.encode(errorEvent));
+
+          logEvent("stream.error", {
+            roomId,
+            clientId,
+            error: streamError.message,
+            partialChars: accumulated.length,
+          });
+        } finally {
+          await writer.close();
+        }
+      })(),
+    );
+
+    return new Response(readable, { headers: createSSEHeaders() });
   }
 
   if (request.method === "POST" && action === "reset") {

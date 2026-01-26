@@ -295,18 +295,27 @@ interface Message {
 ### Phase 7 — Realtime Token Streaming (SSE) (0.5–1.5 days)
 **Goal**: Make assistant responses feel realtime by streaming output chunks to the UI, while keeping the Durable Object as the canonical persisted state.
 
-- [ ] Add `POST /api/rooms/:roomId/message/stream` endpoint with SSE
-- [ ] Implement SSE event protocol (meta, delta, done, error events)
-- [ ] Call Workers AI in streaming mode and forward deltas to client
-- [ ] Persist final assistant message to DO only on completion
-- [ ] Trigger PostMessageProcessor workflow after stream completes
-- [ ] Abort in-flight AI request on client disconnect
-- [ ] Frontend: render streaming "draft bubble" with incremental text
-- [ ] Frontend: add "Stop generating" button to abort stream
-- [ ] Frontend: handle mid-stream errors with partial content + retry
-- [ ] Add guardrails (maxOutputChars=5000) and log streaming metrics
+- [x] Add `POST /api/rooms/:roomId/message/stream` endpoint with SSE
+- [x] Implement SSE event protocol (meta, delta, done, error events)
+- [x] Call Workers AI in streaming mode and forward deltas to client
+- [x] Persist final assistant message to DO only on completion
+- [x] Trigger PostMessageProcessor workflow after stream completes
+- [x] Abort in-flight AI request on client disconnect
+- [x] Frontend: render streaming "draft bubble" with incremental text
+- [x] Frontend: add "Stop generating" button to abort stream
+- [x] Frontend: handle mid-stream errors with partial content + retry
+- [x] Add guardrails (maxOutputChars=5000) and log streaming metrics
 
 **Acceptance**: Assistant response begins rendering within ~1s and streams continuously; refresh shows finalized message in DO; workflow runs only after completion.
+
+**Completed:**
+- SSE event types (meta, delta, done, error) with pure logic functions
+- Streaming AI handler using Workers AI `stream: true` mode
+- processAIStream generator with maxChars truncation
+- Frontend Fetch-based SSE reader with draftContent state
+- "Stop generating" button with AbortController
+- Stream logging (stream.started, stream.completed, stream.error)
+- 27 new unit tests (16 SSE logic + 11 streaming handler)
 
 ### Phase 8 — UI/UX Polishing (0.5–1 day)
 **Goal**: Ensure the interface is smooth, visually polished, and functions well across devices.
