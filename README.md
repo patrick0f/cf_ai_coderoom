@@ -7,6 +7,7 @@ A realtime pair programming assistant built on Cloudflare's edge infrastructure.
 ## What is CodeRoom?
 
 CodeRoom is a web app where you can:
+
 - Create a **room** and paste code
 - **Chat** with an AI pair programmer about your code
 - Get **persistent memory** that influences future answers
@@ -15,12 +16,12 @@ CodeRoom is a web app where you can:
 
 ## How This Satisfies the Assignment
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **LLM** | Workers AI for pair programming + code review |
+| Requirement               | Implementation                                                          |
+| ------------------------- | ----------------------------------------------------------------------- |
+| **LLM**                   | Workers AI for pair programming + code review                           |
 | **Workflow/Coordination** | Cloudflare Workflows for summarization, TODO extraction, review reports |
-| **Chat Input** | Cloudflare Pages React UI |
-| **Memory/State** | Durable Object per room (bounded messages + rolling summary) |
+| **Chat Input**            | Cloudflare Pages React UI                                               |
+| **Memory/State**          | Durable Object per room (bounded messages + rolling summary)            |
 
 ## Tech Stack
 
@@ -28,6 +29,32 @@ CodeRoom is a web app where you can:
 - **Backend**: Cloudflare Worker + Durable Objects
 - **AI**: Workers AI (Llama model)
 - **Coordination**: Cloudflare Workflows
+
+## Frontend Features
+
+| Feature                 | Implementation                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| **Realtime Streaming**  | SSE-based token streaming with live "typing" effect                                |
+| **Syntax Highlighting** | highlight.js with 9 languages (JS, TS, Python, JSON, Bash, CSS, SQL, XML, HTML)    |
+| **Auto-scroll**         | Smart scroll that follows new messages but preserves position when reading history |
+| **Code Blocks**         | VS Code-inspired dark theme with language labels                                   |
+| **Stop Generation**     | Abort in-flight AI requests with "Stop" button                                     |
+| **Copy Actions**        | Copy room link and review results to clipboard                                     |
+| **Rate Limiting**       | 10 messages/min, 5 reviews/min per client                                          |
+| **Artifacts Sidebar**   | Live-updating Summary, TODOs, and Code Review panels                               |
+
+### Frontend Structure
+
+```
+frontend/src/
+├── App.tsx              # Main app component with chat UI
+├── useRoom.ts           # API hook (create, send, stream, review, reset)
+├── useAutoScroll.ts     # Smart scroll position management
+├── CodeBlock.tsx        # Syntax highlighting with highlight.js
+├── MessageContent.tsx   # Renders text + code segments
+├── parseMessageContent.ts # Markdown code block parser
+└── types.ts             # TypeScript types (Message, Review, SSE events)
+```
 
 ## Project Structure
 
@@ -67,6 +94,7 @@ npm run dev:worker
 ```
 
 Local dev runs at:
+
 - Frontend: http://localhost:5173
 - Worker: http://localhost:8787
 
@@ -81,6 +109,7 @@ cd frontend && npm run build && npx wrangler pages deploy dist --project-name=co
 ```
 
 **Deployed URLs:**
+
 - Frontend: https://coderoom.pages.dev
 - Worker API: https://coderoom-worker.pfung5423.workers.dev
 
@@ -96,13 +125,14 @@ cd frontend && npm run build && npx wrangler pages deploy dist --project-name=co
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/rooms` | Create a new room |
-| `GET` | `/api/rooms/:id/snapshot` | Get room state |
-| `POST` | `/api/rooms/:id/message` | Send a message |
-| `POST` | `/api/rooms/:id/review` | Trigger deep review |
-| `POST` | `/api/rooms/:id/reset` | Reset room state |
+| Method | Endpoint                        | Description                    |
+| ------ | ------------------------------- | ------------------------------ |
+| `POST` | `/api/rooms`                    | Create a new room              |
+| `GET`  | `/api/rooms/:id/snapshot`       | Get room state                 |
+| `POST` | `/api/rooms/:id/message`        | Send a message (non-streaming) |
+| `POST` | `/api/rooms/:id/message/stream` | Send a message (SSE streaming) |
+| `POST` | `/api/rooms/:id/review`         | Trigger deep review            |
+| `POST` | `/api/rooms/:id/reset`          | Reset room state               |
 
 ## Architecture
 
@@ -144,4 +174,4 @@ MIT
 
 ---
 
-*Built for the Cloudflare AI Challenge*
+_Built for the Cloudflare AI Challenge_

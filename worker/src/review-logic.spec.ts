@@ -295,4 +295,25 @@ Hope this helps!`;
     expect(result.refactorSuggestions).toHaveLength(1);
     expect(result.refactorSuggestions[0].title).toBe("Valid");
   });
+
+  test("handles truncated JSON by extracting what is parseable", () => {
+    const truncated =
+      '{\n  "summary": "The code has issues with validation",\n  "issues": [\n    {\n      "severity": "major",\n      "title": "Missing input validation",\n      "description": "No validation on user input",\n      "location": "handler.ts"\n    }\n  ],\n  "edgeCases": ["Empty string input"],\n  "refactorSuggestions": [\n    {\n      "title": "Add validation';
+
+    const result = parseReviewResponse(truncated);
+
+    expect(result.summary).toBe("The code has issues with validation");
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0].title).toBe("Missing input validation");
+    expect(result.edgeCases).toEqual(["Empty string input"]);
+  });
+
+  test("extracts summary from truncated JSON with only summary complete", () => {
+    const truncated =
+      '{"summary": "Good code overall", "issues": [{"severity": "minor", "tit';
+
+    const result = parseReviewResponse(truncated);
+
+    expect(result.summary).toBe("Good code overall");
+  });
 });

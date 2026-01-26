@@ -53,7 +53,7 @@ Safety & security:
 
 export const AI_LIMITS = {
   maxContextChars: 6000,
-  maxOutputChars: 5000,
+  maxOutputChars: 8000,
 } as const;
 
 export const SUMMARY_PROMPT = `You are a conversation summarizer for a pair-programming assistant.

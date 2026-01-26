@@ -85,6 +85,73 @@ function createFallbackReport(summary: string): ReviewReport {
   };
 }
 
+function extractStringField(json: string, field: string): string | null {
+  const pattern = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`);
+  const match = json.match(pattern);
+  return match ? match[1].replace(/\\"/g, '"').replace(/\\\\/g, "\\") : null;
+}
+
+function extractArrayField<T>(
+  json: string,
+  field: string,
+  validator: (item: unknown) => item is T,
+): T[] {
+  const pattern = new RegExp(`"${field}"\\s*:\\s*\\[([\\s\\S]*?)(?:\\]|$)`);
+  const match = json.match(pattern);
+  if (!match) return [];
+
+  const arrayContent = match[1];
+  const items: T[] = [];
+  const objectPattern = /\{[^{}]*\}/g;
+  let objMatch;
+
+  while ((objMatch = objectPattern.exec(arrayContent)) !== null) {
+    try {
+      const parsed = JSON.parse(objMatch[0]) as unknown;
+      if (validator(parsed)) {
+        items.push(parsed);
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return items.slice(0, MAX_ARRAY_ITEMS);
+}
+
+function extractStringArrayField(json: string, field: string): string[] {
+  const pattern = new RegExp(`"${field}"\\s*:\\s*\\[([\\s\\S]*?)(?:\\]|$)`);
+  const match = json.match(pattern);
+  if (!match) return [];
+
+  const items: string[] = [];
+  const stringPattern = /"((?:[^"\\]|\\.)*)"/g;
+  let strMatch;
+
+  while ((strMatch = stringPattern.exec(match[1])) !== null) {
+    items.push(strMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+  }
+
+  return items.slice(0, MAX_ARRAY_ITEMS);
+}
+
+function tryParseTruncatedJson(json: string): ReviewReport | null {
+  const summary = extractStringField(json, "summary");
+  if (!summary) return null;
+
+  return {
+    summary,
+    issues: extractArrayField(json, "issues", isValidIssue),
+    edgeCases: extractStringArrayField(json, "edgeCases"),
+    refactorSuggestions: extractArrayField(
+      json,
+      "refactorSuggestions",
+      isValidRefactorSuggestion,
+    ),
+    testPlan: extractStringArrayField(json, "testPlan"),
+  };
+}
+
 export function parseReviewResponse(response: unknown): ReviewReport {
   if (typeof response !== "string") {
     return createFallbackReport("Invalid response");
@@ -142,6 +209,10 @@ export function parseReviewResponse(response: unknown): ReviewReport {
       testPlan,
     };
   } catch {
+    const truncatedResult = tryParseTruncatedJson(jsonString);
+    if (truncatedResult) {
+      return truncatedResult;
+    }
     return createFallbackReport(response);
   }
 }
