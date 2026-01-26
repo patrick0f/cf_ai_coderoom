@@ -20,7 +20,7 @@ describe("Room API", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string; phase: number };
     expect(body.status).toBe("ok");
-    expect(body.phase).toBe(7);
+    expect(body.phase).toBe(8);
   });
 
   test("POST /api/rooms requires X-Client-Id header", async () => {

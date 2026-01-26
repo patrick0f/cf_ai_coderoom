@@ -320,3 +320,125 @@ button:disabled {
 .btn-stop:hover:not(:disabled) {
   background: #b91c1c;
 }
+
+/* Code block styles */
+.code-block-wrapper {
+  position: relative;
+  margin: 0.75rem 0;
+}
+
+.code-block {
+  background: #1e1e1e;
+  border-radius: 6px;
+  padding: 1rem;
+  padding-top: 1.75rem;
+  overflow-x: auto;
+  font-family: "SF Mono", "Fira Code", "Monaco", "Consolas", monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.code-block code {
+  color: #d4d4d4;
+}
+
+.code-language {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 0.65rem;
+  color: #858585;
+  font-family: system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Syntax highlighting (highlight.js theme inline) */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name {
+  color: #569cd6;
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: #ce9178;
+}
+
+.hljs-number,
+.hljs-literal {
+  color: #b5cea8;
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion {
+  color: #6a9955;
+}
+
+.hljs-title,
+.hljs-section {
+  color: #dcdcaa;
+}
+
+.hljs-class .hljs-title,
+.hljs-type {
+  color: #4ec9b0;
+}
+
+.hljs-variable,
+.hljs-template-variable {
+  color: #9cdcfe;
+}
+
+.hljs-function {
+  color: #dcdcaa;
+}
+
+.hljs-params {
+  color: #9cdcfe;
+}
+
+.hljs-attribute {
+  color: #9cdcfe;
+}
+
+.hljs-meta {
+  color: #c586c0;
+}
+
+/* Button transitions */
+button {
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Smooth scrolling for messages */
+.messages {
+  scroll-behavior: smooth;
+}
+
+/* Loading pulse animation */
+.message.loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

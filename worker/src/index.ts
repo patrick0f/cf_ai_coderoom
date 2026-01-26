@@ -33,7 +33,7 @@ export default {
       return Response.json({
         status: "ok",
         timestamp: new Date().toISOString(),
-        phase: 7,
+        phase: 8,
       });
     }
 

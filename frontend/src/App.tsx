@@ -1,5 +1,7 @@
 import { useState, FormEvent } from "react";
 import { useRoom } from "./useRoom";
+import { MessageContent } from "./MessageContent";
+import { useAutoScroll } from "./useAutoScroll";
 import type { Message } from "./types";
 
 function App() {
@@ -21,6 +23,11 @@ function App() {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [reviewCopied, setReviewCopied] = useState(false);
+
+  const { containerRef, sentinelRef } = useAutoScroll(
+    [snapshot?.messages, draftContent],
+    streaming,
+  );
 
   const copyRoomLink = async () => {
     await navigator.clipboard.writeText(window.location.href);
@@ -101,21 +108,23 @@ function App() {
 
       <div className="main">
         <div className="chat-panel">
-          <div className="messages">
+          <div className="messages" ref={containerRef}>
             {snapshot?.messages.length === 0 && !loading && (
               <p className="empty">No messages yet. Start a conversation!</p>
             )}
             {snapshot?.messages.map((msg: Message) => (
               <div key={msg.seq} className={`message ${msg.role}`}>
                 <div className="message-role">{msg.role}</div>
-                <div className="message-content">{msg.content}</div>
+                <div className="message-content">
+                  <MessageContent content={msg.content} />
+                </div>
               </div>
             ))}
             {streaming && (
               <div className="message assistant streaming">
                 <div className="message-role">assistant</div>
                 <div className="message-content">
-                  {draftContent}
+                  <MessageContent content={draftContent} />
                   <span className="cursor">▌</span>
                 </div>
               </div>
@@ -123,6 +132,7 @@ function App() {
             {loading && !streaming && (
               <div className="message assistant loading">Thinking...</div>
             )}
+            <div ref={sentinelRef} />
           </div>
 
           <form onSubmit={handleSubmit} className="input-form">

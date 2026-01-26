@@ -9,19 +9,26 @@
     "preview": "vite preview",
     "deploy": "wrangler pages deploy dist",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext ts,tsx"
+    "lint": "eslint src --ext ts,tsx",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "highlight.js": "^11.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^25.0.10",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
+    "jsdom": "^27.4.0",
     "typescript": "^5.3.3",
     "vite": "^7.3.1",
+    "vitest": "^3.2.4",
     "wrangler": "^4.60.0"
   }
 }

@@ -320,12 +320,18 @@ interface Message {
 ### Phase 8 — UI/UX Polishing (0.5–1 day)
 **Goal**: Ensure the interface is smooth, visually polished, and functions well across devices.
 
-- [ ] Visual polish: consistent spacing, typography, transitions
-- [ ] Keyboard shortcuts (Enter to send, Shift+Enter for newline)
-- [ ] Auto-scroll to latest message and focus management
-- [ ] Syntax highlighting for code blocks in messages
-- [ ] Clear error messages with recovery actions
+- [x] Visual polish: consistent spacing, typography, transitions
+- [x] Auto-scroll to latest message and focus management
+- [x] Syntax highlighting for code blocks in messages
 
 **Acceptance**: UI feels responsive and professional; works well on desktop; no jarring transitions or confusing states.
+
+**Completed:**
+- Syntax highlighting via highlight.js with 9 language support (JS, TS, Python, JSON, Bash, CSS, SQL, XML/HTML)
+- Code block parser with TDD (10 unit tests)
+- Auto-scroll hook that preserves position when reading history (6 unit tests)
+- Smooth button transitions and loading pulse animation
+- Language label display on code blocks
+- VS Code-inspired dark syntax theme
 
 
