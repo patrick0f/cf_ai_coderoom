@@ -44,6 +44,7 @@ export type RoomData = {
   rollingSummary: string;
   pinnedPreferences: string;
   artifacts: Artifacts;
+  rateLimits: Record<string, RateLimitEntry>;
 };
 
 export type RoomSnapshot = RoomData & {
@@ -59,3 +60,13 @@ export const LIMITS = {
   maxMessages: 30,
   maxCharsPerMessage: 10000,
 } as const;
+
+export type RateLimitEntry = {
+  count: number;
+  resetAt: number;
+};
+
+export type RateLimitConfig = {
+  maxRequests: number;
+  windowMs: number;
+};

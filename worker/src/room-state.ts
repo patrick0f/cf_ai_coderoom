@@ -6,6 +6,7 @@ import {
   createMessage,
   validateMessageContent,
 } from "./room-logic";
+import { checkRateLimit, RATE_LIMITS } from "./rate-limit";
 
 const STORAGE_KEY = "room";
 
@@ -42,6 +43,10 @@ export class RoomState implements DurableObject {
 
       if (request.method === "POST" && path === "/artifacts") {
         return this.handleUpdateArtifacts(request);
+      }
+
+      if (request.method === "POST" && path === "/rate-check") {
+        return this.handleRateCheck(request);
       }
 
       return this.errorResponse("Not found", 404);
@@ -248,6 +253,43 @@ export class RoomState implements DurableObject {
     await this.ctx.storage.put(STORAGE_KEY, roomData);
 
     return Response.json({ success: true });
+  }
+
+  private async handleRateCheck(request: Request): Promise<Response> {
+    const body = (await request.json()) as {
+      clientId: string;
+      action: "message" | "review";
+    };
+    const { clientId, action } = body;
+
+    if (!clientId || !action) {
+      return this.errorResponse(
+        "clientId and action required",
+        400,
+        "MISSING_PARAMS",
+      );
+    }
+
+    const config = RATE_LIMITS[action];
+    if (!config) {
+      return this.errorResponse("Invalid action", 400, "INVALID_ACTION");
+    }
+
+    const roomData = await this.ctx.storage.get<RoomData>(STORAGE_KEY);
+    if (!roomData) {
+      return this.errorResponse("Room not found", 404, "ROOM_NOT_FOUND");
+    }
+
+    const key = `${clientId}:${action}`;
+    const result = checkRateLimit(roomData.rateLimits, key, config, Date.now());
+
+    roomData.rateLimits[key] = result.updated;
+    await this.ctx.storage.put(STORAGE_KEY, roomData);
+
+    return Response.json({
+      allowed: result.allowed,
+      retryAfter: result.retryAfter,
+    });
   }
 
   private errorResponse(

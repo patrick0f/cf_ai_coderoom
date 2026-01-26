@@ -87,11 +87,12 @@ cd frontend && npm run build && npx wrangler pages deploy dist --project-name=co
 ## Try It (2 Minutes)
 
 1. **Visit**: [coderoom.pages.dev](https://coderoom.pages.dev)
-2. **Create a room** or use the default one
-3. **Paste some code** in the code panel
-4. **Ask a question** like "What does this code do?" or "Any bugs here?"
-5. **Click Review** for a structured deep analysis
-6. **Watch the sidebar** for updated summary and TODOs
+2. **Create a room** - click "Create New Room"
+3. **Copy the link** to bookmark or share (note: single-user per room)
+4. **Send a message** with code or a question about code
+5. **Watch the sidebar** - Summary and TODOs update after each message
+6. **Click "Run Review"** for structured code analysis
+7. **Reset** anytime to clear history and start fresh
 
 ## API Endpoints
 
@@ -133,7 +134,7 @@ cd frontend && npm run build && npx wrangler pages deploy dist --project-name=co
 - [x] **Phase 3**: LLM integration (Workers AI)
 - [x] **Phase 4**: Memory distillation workflow
 - [x] **Phase 5**: Deep review mode
-- [ ] **Phase 6**: Polish + demo hardening
+- [x] **Phase 6**: Polish + demo hardening
 - [ ] **Phase 7**: Realtime token streaming (SSE)
 - [ ] **Phase 8**: UI/UX polishing
 

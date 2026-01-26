@@ -16,6 +16,41 @@ function App() {
 
   const [input, setInput] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [reviewCopied, setReviewCopied] = useState(false);
+
+  const copyRoomLink = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const copyReview = async () => {
+    const review = snapshot?.artifacts.lastReview?.content;
+    if (!review) return;
+
+    const lines: string[] = [`Summary: ${review.summary}`, ""];
+
+    if (review.issues.length > 0) {
+      lines.push("Issues:");
+      review.issues.forEach((issue) => {
+        lines.push(`  [${issue.severity.toUpperCase()}] ${issue.title}`);
+        lines.push(`    ${issue.description}`);
+      });
+      lines.push("");
+    }
+
+    if (review.testPlan.length > 0) {
+      lines.push("Test Plan:");
+      review.testPlan.forEach((test) => {
+        lines.push(`  - ${test}`);
+      });
+    }
+
+    await navigator.clipboard.writeText(lines.join("\n"));
+    setReviewCopied(true);
+    setTimeout(() => setReviewCopied(false), 2000);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,7 +84,14 @@ function App() {
       <header className="header">
         <h1>CodeRoom</h1>
         <span className="room-id">Room: {roomId.slice(0, 8)}...</span>
-        <button onClick={resetRoom} disabled={loading} className="btn-secondary">
+        <button onClick={copyRoomLink} className="btn-secondary">
+          {linkCopied ? "Copied!" : "Copy Link"}
+        </button>
+        <button
+          onClick={resetRoom}
+          disabled={loading}
+          className="btn-secondary"
+        >
           Reset
         </button>
       </header>
@@ -66,7 +108,9 @@ function App() {
                 <div className="message-content">{msg.content}</div>
               </div>
             ))}
-            {loading && <div className="message assistant loading">Thinking...</div>}
+            {loading && (
+              <div className="message assistant loading">Thinking...</div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="input-form">
@@ -86,7 +130,10 @@ function App() {
         <aside className="artifacts-panel">
           <section className="artifact">
             <h3>Summary</h3>
-            <p>{snapshot?.rollingSummary?.replace(/^\* /gm, "• ") || "No summary yet"}</p>
+            <p>
+              {snapshot?.rollingSummary?.replace(/^\* /gm, "• ") ||
+                "No summary yet"}
+            </p>
           </section>
 
           <section className="artifact">
@@ -107,24 +154,37 @@ function App() {
               Code Review
               <button
                 onClick={handleReview}
-                disabled={loading || reviewLoading || !snapshot?.messages.length}
+                disabled={
+                  loading || reviewLoading || !snapshot?.messages.length
+                }
                 className="btn-small"
               >
                 {reviewLoading ? "Reviewing..." : "Run Review"}
               </button>
+              {snapshot?.artifacts.lastReview && (
+                <button onClick={copyReview} className="btn-small">
+                  {reviewCopied ? "Copied!" : "Copy"}
+                </button>
+              )}
             </h3>
             {snapshot?.artifacts.lastReview ? (
               <div className="review">
-                <p><strong>Summary:</strong> {snapshot.artifacts.lastReview.content.summary}</p>
+                <p>
+                  <strong>Summary:</strong>{" "}
+                  {snapshot.artifacts.lastReview.content.summary}
+                </p>
                 {snapshot.artifacts.lastReview.content.issues.length > 0 && (
                   <div>
                     <strong>Issues:</strong>
                     <ul>
-                      {snapshot.artifacts.lastReview.content.issues.map((issue, i) => (
-                        <li key={i} className={`issue-${issue.severity}`}>
-                          <span className="severity">{issue.severity}</span> {issue.title}
-                        </li>
-                      ))}
+                      {snapshot.artifacts.lastReview.content.issues.map(
+                        (issue, i) => (
+                          <li key={i} className={`issue-${issue.severity}`}>
+                            <span className="severity">{issue.severity}</span>{" "}
+                            {issue.title}
+                          </li>
+                        ),
+                      )}
                     </ul>
                   </div>
                 )}
@@ -132,15 +192,19 @@ function App() {
                   <div>
                     <strong>Test Plan:</strong>
                     <ul>
-                      {snapshot.artifacts.lastReview.content.testPlan.map((test, i) => (
-                        <li key={i}>{test}</li>
-                      ))}
+                      {snapshot.artifacts.lastReview.content.testPlan.map(
+                        (test, i) => (
+                          <li key={i}>{test}</li>
+                        ),
+                      )}
                     </ul>
                   </div>
                 )}
               </div>
             ) : (
-              <p className="empty">No review yet. Click "Run Review" to analyze the conversation.</p>
+              <p className="empty">
+                No review yet. Click "Run Review" to analyze the conversation.
+              </p>
             )}
           </section>
         </aside>

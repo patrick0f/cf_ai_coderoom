@@ -13,6 +13,10 @@ export { PostMessageProcessor } from "./workflows/post-message-processor";
 
 const CLIENT_ID_HEADER = "X-Client-Id";
 
+function logEvent(event: string, data: Record<string, unknown>): void {
+  console.log(JSON.stringify({ event, ...data, ts: Date.now() }));
+}
+
 export default {
   async fetch(
     request: Request,
@@ -27,7 +31,7 @@ export default {
       return Response.json({
         status: "ok",
         timestamp: new Date().toISOString(),
-        phase: 5,
+        phase: 6,
       });
     }
 
@@ -71,6 +75,8 @@ async function handleCreateRoom(request: Request, env: Env): Promise<Response> {
     return initResponse;
   }
 
+  logEvent("room.created", { roomId });
+
   return Response.json(
     {
       roomId,
@@ -108,6 +114,21 @@ async function handleRoomAction(
         "X-Client-Id header required",
         400,
         "MISSING_CLIENT_ID",
+      );
+    }
+
+    const rateCheck = await checkRateLimitForAction(stub, clientId, "message");
+    if (!rateCheck.allowed) {
+      logEvent("rate.limited", { clientId, endpoint: "message", roomId });
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded", code: "RATE_LIMITED" }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(rateCheck.retryAfter || 60),
+          },
+        },
       );
     }
 
@@ -161,6 +182,11 @@ async function handleRoomAction(
     );
 
     if (storeRes.ok) {
+      logEvent("message.sent", {
+        roomId,
+        clientId,
+        contentLength: userContent.length,
+      });
       ctx.waitUntil(
         env.POST_MESSAGE_WORKFLOW.create({
           id: `${roomId}-${Date.now()}`,
@@ -181,13 +207,19 @@ async function handleRoomAction(
       );
     }
 
-    return stub.fetch(
+    const resetRes = await stub.fetch(
       new Request("http://do/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientId }),
       }),
     );
+
+    if (resetRes.ok) {
+      logEvent("room.reset", { roomId, clientId });
+    }
+
+    return resetRes;
   }
 
   if (request.method === "POST" && action === "review") {
@@ -196,6 +228,21 @@ async function handleRoomAction(
         "X-Client-Id header required",
         400,
         "MISSING_CLIENT_ID",
+      );
+    }
+
+    const rateCheck = await checkRateLimitForAction(stub, clientId, "review");
+    if (!rateCheck.allowed) {
+      logEvent("rate.limited", { clientId, endpoint: "review", roomId });
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded", code: "RATE_LIMITED" }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(rateCheck.retryAfter || 60),
+          },
+        },
       );
     }
 
@@ -229,6 +276,7 @@ async function handleRoomAction(
 
     const lastReview = snapshot.artifacts.lastReview;
     if (lastReview && lastReview.inputHash === inputHash && !body.force) {
+      logEvent("review.requested", { roomId, cached: true });
       return Response.json({ review: lastReview, cached: true });
     }
 
@@ -263,6 +311,7 @@ async function handleRoomAction(
       }),
     );
 
+    logEvent("review.requested", { roomId, cached: false });
     return Response.json({ review, cached: false });
   }
 
@@ -275,4 +324,19 @@ function errorResponse(error: string, status: number, code?: string): Response {
     body.code = code;
   }
   return Response.json(body, { status });
+}
+
+async function checkRateLimitForAction(
+  stub: DurableObjectStub,
+  clientId: string,
+  action: "message" | "review",
+): Promise<{ allowed: boolean; retryAfter?: number }> {
+  const res = await stub.fetch(
+    new Request("http://do/rate-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId, action }),
+    }),
+  );
+  return res.json() as Promise<{ allowed: boolean; retryAfter?: number }>;
 }

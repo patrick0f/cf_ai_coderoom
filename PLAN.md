@@ -278,13 +278,19 @@ interface Message {
 ### Phase 6 — Polish + Demo Hardening (0.5–1 day)
 **Goal**: Reduce flakiness; easy to evaluate.
 
-- [ ] Add "Reset room" button
-- [ ] Add "Copy room link" + "Copy last review"
-- [ ] Add basic rate limiting
-- [ ] Add logs for key events
-- [ ] Tighten README with "Try it in 2 minutes" section
+- [x] Add "Reset room" button
+- [x] Add "Copy room link" + "Copy last review"
+- [x] Add basic rate limiting
+- [x] Add logs for key events
+- [x] Tighten README with "Try it in 2 minutes" section
 
 **Acceptance**: Stranger can run locally or use deployed link without confusion.
+
+**Completed:**
+- Rate limiting via Durable Object (10 msg/min, 5 review/min per clientId)
+- Structured JSON logging for room.created, message.sent, review.requested, room.reset, rate.limited
+- Copy Link + Copy Review buttons with "Copied!" feedback
+- Updated README "Try It" section with clear instructions
 
 ### Phase 7 — Realtime Token Streaming (SSE) (0.5–1.5 days)
 **Goal**: Make assistant responses feel realtime by streaming output chunks to the UI, while keeping the Durable Object as the canonical persisted state.

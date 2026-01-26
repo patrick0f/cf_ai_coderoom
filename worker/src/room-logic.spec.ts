@@ -65,6 +65,7 @@ describe("createRoomData", () => {
         todos: null,
         notes: "",
       },
+      rateLimits: {},
     });
   });
 
