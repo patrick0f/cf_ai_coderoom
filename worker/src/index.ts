@@ -3,12 +3,23 @@ import { buildChatMessages } from "./ai-context";
 import { generateAssistantResponse } from "./ai-handler";
 import { streamAssistantResponse } from "./ai-handler-stream";
 import { formatSSEEvent, createSSEHeaders } from "./sse-logic";
-import { SYSTEM_PROMPT, AI_LIMITS, REVIEW_PROMPT } from "./prompts";
+import {
+  SYSTEM_PROMPT,
+  AI_LIMITS,
+  REVIEW_PROMPT,
+  SUMMARY_PROMPT,
+  TODO_EXTRACT_PROMPT,
+} from "./prompts";
 import {
   computeInputHash,
   buildReviewMessages,
   parseReviewResponse,
 } from "./review-logic";
+import {
+  buildSummaryMessages,
+  buildTodoExtractMessages,
+  parseTodosFromResponse,
+} from "./summary-logic";
 
 export { RoomState } from "./room-state";
 export { PostMessageProcessor } from "./workflows/post-message-processor";
@@ -298,12 +309,54 @@ async function handleRoomAction(
             }),
           );
 
-          ctx.waitUntil(
-            env.POST_MESSAGE_WORKFLOW.create({
-              id: `${roomId}-${Date.now()}`,
-              params: { roomId },
-            }),
-          );
+          try {
+            const updatedSnapshotRes = await stub.fetch(
+              new Request("http://do/snapshot", { method: "GET" }),
+            );
+            if (updatedSnapshotRes.ok) {
+              const updatedSnapshot =
+                (await updatedSnapshotRes.json()) as RoomSnapshot;
+
+              if (updatedSnapshot.messages.length > 0) {
+                const summaryMessages = buildSummaryMessages(
+                  SUMMARY_PROMPT,
+                  updatedSnapshot.rollingSummary,
+                  updatedSnapshot.messages,
+                );
+                const summaryResponse = await generateAssistantResponse(
+                  env.AI,
+                  summaryMessages,
+                );
+                const summary = summaryResponse.slice(0, 500);
+
+                const todoMessages = buildTodoExtractMessages(
+                  TODO_EXTRACT_PROMPT,
+                  updatedSnapshot.messages,
+                );
+                const todoResponse = await generateAssistantResponse(
+                  env.AI,
+                  todoMessages,
+                );
+                const todos = parseTodosFromResponse(todoResponse);
+
+                await stub.fetch(
+                  new Request("http://do/artifacts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ rollingSummary: summary, todos }),
+                  }),
+                );
+              }
+            }
+          } catch (artifactErr) {
+            logEvent("artifacts.error", {
+              roomId,
+              error:
+                artifactErr instanceof Error
+                  ? artifactErr.message
+                  : "Unknown error",
+            });
+          }
 
           const durationMs = Date.now() - startTime;
           logEvent("stream.completed", {

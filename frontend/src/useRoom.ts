@@ -163,6 +163,7 @@ export function useRoom() {
             } else if (event.type === "done") {
               setDraftContent("");
               await fetchSnapshot();
+              setTimeout(() => fetchSnapshot(), 3000);
             } else if (event.type === "error") {
               setError(event.message);
               if (previousSnapshot) {
@@ -195,7 +196,6 @@ export function useRoom() {
   const requestReview = useCallback(
     async (force = false): Promise<ReviewResponse | null> => {
       if (!roomId) return null;
-      setLoading(true);
       setError(null);
       try {
         const res = await fetch(`/api/rooms/${roomId}/review`, {
@@ -213,8 +213,6 @@ export function useRoom() {
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
         return null;
-      } finally {
-        setLoading(false);
       }
     },
     [roomId, headers, fetchSnapshot],
