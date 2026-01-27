@@ -13,7 +13,17 @@ export async function generateAssistantResponse(
     throw new Error("Invalid AI response format");
   }
 
-  let content = (response as { response: string }).response || "";
+  const rawContent = (response as { response: unknown }).response;
+
+  let content: string;
+
+  if (typeof rawContent === "string") {
+    content = rawContent;
+  } else if (rawContent !== null && typeof rawContent === "object") {
+    content = JSON.stringify(rawContent);
+  } else {
+    throw new Error("AI response content is not a string or object");
+  }
 
   if (content.length > AI_LIMITS.maxOutputChars) {
     content = content.slice(0, AI_LIMITS.maxOutputChars);

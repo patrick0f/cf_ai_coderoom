@@ -316,4 +316,90 @@ Hope this helps!`;
 
     expect(result.summary).toBe("Good code overall");
   });
+
+  test("handles JSON with prose before (no code block)", () => {
+    const response = `Here is my analysis of the code:
+{
+  "summary": "The code has some issues",
+  "issues": [],
+  "edgeCases": [],
+  "refactorSuggestions": [],
+  "testPlan": []
+}`;
+
+    const result = parseReviewResponse(response);
+
+    expect(result.summary).toBe("The code has some issues");
+  });
+
+  test("handles JSON with prose before and after (no code block)", () => {
+    const response = `Based on the conversation, here is my review:
+
+{
+  "summary": "Good implementation overall",
+  "issues": [{"severity": "minor", "title": "Test", "description": "desc", "location": "loc"}],
+  "edgeCases": ["Edge 1"],
+  "refactorSuggestions": [],
+  "testPlan": ["Test 1"]
+}
+
+Let me know if you need more details!`;
+
+    const result = parseReviewResponse(response);
+
+    expect(result.summary).toBe("Good implementation overall");
+    expect(result.issues).toHaveLength(1);
+    expect(result.edgeCases).toEqual(["Edge 1"]);
+    expect(result.testPlan).toEqual(["Test 1"]);
+  });
+
+  test("handles raw JSON directly (most common case)", () => {
+    const response = `{
+  "summary": "Code review complete",
+  "issues": [],
+  "edgeCases": [],
+  "refactorSuggestions": [],
+  "testPlan": []
+}`;
+
+    const result = parseReviewResponse(response);
+
+    expect(result.summary).toBe("Code review complete");
+  });
+
+  test("handles multiline summary in JSON", () => {
+    const response = JSON.stringify({
+      summary:
+        "The code has multiple issues:\n1. Missing validation\n2. No error handling",
+      issues: [],
+      edgeCases: [],
+      refactorSuggestions: [],
+      testPlan: [],
+    });
+
+    const result = parseReviewResponse(response);
+
+    expect(result.summary).toContain("The code has multiple issues:");
+    expect(result.summary).toContain("Missing validation");
+  });
+
+  test("handles code block with extra whitespace", () => {
+    const response = `
+\`\`\`json
+
+{
+  "summary": "Review with whitespace",
+  "issues": [],
+  "edgeCases": [],
+  "refactorSuggestions": [],
+  "testPlan": []
+}
+
+\`\`\`
+`;
+
+    const result = parseReviewResponse(response);
+
+    expect(result.summary).toBe("Review with whitespace");
+  });
 });
