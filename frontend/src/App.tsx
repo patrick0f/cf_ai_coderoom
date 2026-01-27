@@ -109,7 +109,7 @@ function App() {
       <div className="main">
         <div className="chat-panel">
           <div className="messages" ref={containerRef}>
-            {snapshot?.messages.length === 0 && !loading && (
+            {snapshot?.messages.length === 0 && !loading && !streaming && (
               <p className="empty">No messages yet. Start a conversation!</p>
             )}
             {snapshot?.messages.map((msg: Message) => (

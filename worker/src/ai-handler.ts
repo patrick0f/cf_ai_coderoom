@@ -7,7 +7,7 @@ export async function generateAssistantResponse(
   ai: Ai,
   messages: AiMessage[],
 ): Promise<string> {
-  const response = await ai.run(MODEL, { messages });
+  const response = await ai.run(MODEL, { messages, max_tokens: 4096 });
 
   if (!response || typeof response !== "object" || !("response" in response)) {
     throw new Error("Invalid AI response format");

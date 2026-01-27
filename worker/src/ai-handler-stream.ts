@@ -64,6 +64,7 @@ export async function* streamAssistantResponse(
   const stream = (await ai.run(MODEL, {
     messages,
     stream: true,
+    max_tokens: 4096,
   })) as ReadableStream<Uint8Array>;
 
   let accumulated = "";

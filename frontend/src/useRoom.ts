@@ -98,6 +98,30 @@ export function useRoom() {
   const sendMessageStream = useCallback(
     async (content: string) => {
       if (!roomId) return;
+
+      let previousSnapshot: RoomSnapshot | null = null;
+
+      setSnapshot((prev) => {
+        previousSnapshot = prev;
+        if (!prev) return prev;
+        const nextSeq =
+          prev.messages.length > 0
+            ? prev.messages[prev.messages.length - 1].seq + 1
+            : 1;
+        return {
+          ...prev,
+          messages: [
+            ...prev.messages,
+            {
+              seq: nextSeq,
+              role: "user" as const,
+              content,
+              ts: Date.now(),
+            },
+          ],
+        };
+      });
+
       setStreaming(true);
       setDraftContent("");
       setError(null);
@@ -141,10 +165,16 @@ export function useRoom() {
               await fetchSnapshot();
             } else if (event.type === "error") {
               setError(event.message);
+              if (previousSnapshot) {
+                setSnapshot(previousSnapshot);
+              }
             }
           }
         }
       } catch (err) {
+        if (previousSnapshot) {
+          setSnapshot(previousSnapshot);
+        }
         if ((err as Error).name !== "AbortError") {
           setError(err instanceof Error ? err.message : "Unknown error");
         }
