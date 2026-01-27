@@ -3,6 +3,12 @@ import type { RoomSnapshot, ReviewResponse, SSEEvent } from "./types";
 
 const CLIENT_ID_KEY = "coderoom_client_id";
 
+function getRoomIdFromUrl(): string | null {
+  const path = window.location.pathname;
+  const match = path.match(/^\/([0-9a-f-]{36})$/i);
+  return match ? match[1] : null;
+}
+
 function getOrCreateClientId(): string {
   let clientId = localStorage.getItem(CLIENT_ID_KEY);
   if (!clientId) {
@@ -14,7 +20,7 @@ function getOrCreateClientId(): string {
 
 export function useRoom() {
   const [clientId] = useState(getOrCreateClientId);
-  const [roomId, setRoomId] = useState<string | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(getRoomIdFromUrl);
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +50,7 @@ export function useRoom() {
       }
       const data = await res.json();
       setRoomId(data.roomId);
+      window.history.pushState({}, "", `/${data.roomId}`);
       return data.roomId;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
