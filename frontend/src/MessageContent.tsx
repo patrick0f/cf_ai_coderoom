@@ -1,27 +1,34 @@
-import { useMemo } from "react";
-import { parseMessageContent } from "./parseMessageContent";
+import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import { CodeBlock } from "./CodeBlock";
 
 type MessageContentProps = {
   content: string;
 };
 
-export function MessageContent({ content }: MessageContentProps) {
-  const segments = useMemo(() => parseMessageContent(content), [content]);
+const components: Components = {
+  code({ className, children, ...props }) {
+    const match = /language-(\w+)/.exec(className || "");
+    const codeString = String(children).replace(/\n$/, "");
 
-  return (
-    <>
-      {segments.map((segment, index) =>
-        segment.type === "code" ? (
-          <CodeBlock
-            key={index}
-            code={segment.content}
-            language={segment.language}
-          />
-        ) : (
-          <span key={index}>{segment.content}</span>
-        ),
-      )}
-    </>
-  );
+    // Block code has className with language, inline code doesn't
+    if (match) {
+      return <CodeBlock code={codeString} language={match[1]} />;
+    }
+
+    // Inline code
+    return (
+      <code className="inline-code" {...props}>
+        {children}
+      </code>
+    );
+  },
+  // Override pre to avoid double-wrapping block code
+  pre({ children }) {
+    return <>{children}</>;
+  },
+};
+
+export function MessageContent({ content }: MessageContentProps) {
+  return <ReactMarkdown components={components}>{content}</ReactMarkdown>;
 }

@@ -162,10 +162,11 @@ function App() {
         <aside className="artifacts-panel">
           <section className="artifact">
             <h3>Summary</h3>
-            <p>
-              {snapshot?.rollingSummary?.replace(/^\* /gm, "• ") ||
-                "No summary yet"}
-            </p>
+            {snapshot?.rollingSummary ? (
+              <MessageContent content={snapshot.rollingSummary} />
+            ) : (
+              <p className="empty">No summary yet</p>
+            )}
           </section>
 
           <section className="artifact">
