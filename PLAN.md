@@ -333,5 +333,7 @@ interface Message {
 - Smooth button transitions and loading pulse animation
 - Language label display on code blocks
 - VS Code-inspired dark syntax theme
+- URL-based room routing: `/{roomId}` links work, page refresh persists room state
+- Cloudflare Pages `_redirects` for SPA routing
 
 

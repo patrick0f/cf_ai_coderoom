@@ -2,8 +2,6 @@
 
 A realtime pair programming assistant built on Cloudflare's edge infrastructure.
 
-> **🚧 Work in Progress** - See [PLAN.md](./PLAN.md) for the full implementation roadmap.
-
 ## What is CodeRoom?
 
 CodeRoom is a web app where you can:
@@ -40,6 +38,7 @@ CodeRoom is a web app where you can:
 | **Code Blocks**         | VS Code-inspired dark theme with language labels                                   |
 | **Stop Generation**     | Abort in-flight AI requests with "Stop" button                                     |
 | **Copy Actions**        | Copy room link and review results to clipboard                                     |
+| **Shareable Links**     | URL-based routing - share `/{roomId}` links that persist on refresh                |
 | **Rate Limiting**       | 10 messages/min, 5 reviews/min per client                                          |
 | **Artifacts Sidebar**   | Live-updating Summary, TODOs, and Code Review panels                               |
 
@@ -111,13 +110,12 @@ cd frontend && npm run build && npx wrangler pages deploy dist --project-name=co
 **Deployed URLs:**
 
 - Frontend: https://coderoom.pages.dev
-- Worker API: https://coderoom-worker.pfung5423.workers.dev
 
 ## Try It (2 Minutes)
 
 1. **Visit**: [coderoom.pages.dev](https://coderoom.pages.dev)
 2. **Create a room** - click "Create New Room"
-3. **Copy the link** to bookmark or share (note: single-user per room)
+3. **Copy the link** to share - URLs include room ID and persist on refresh
 4. **Send a message** with code or a question about code
 5. **Watch the sidebar** - Summary and TODOs update after each message
 6. **Click "Run Review"** for structured code analysis

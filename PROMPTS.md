@@ -4,6 +4,76 @@ This document logs AI prompts used during the development of CodeRoom.
 
 ---
 
+## AI-Assisted Development Workflow
+
+This project was built using Claude Code as a pair programming assistant. The development followed a structured, phase-based approach designed to work effectively with AI context limitations.
+
+### Initial Architecture Planning
+
+Before writing any code, the overall architecture and feature set was planned in a separate Claude session:
+
+1. **Define requirements** - Map project goals to Cloudflare primitives (Workers AI, Durable Objects, Workflows, Pages)
+2. **Break into phases** - Create 8 discrete phases with clear acceptance criteria (see PLAN.md)
+3. **Scope boundaries** - Explicitly define what's in/out of scope to prevent feature creep
+
+### PLAN.md as the Source of Truth
+
+The `PLAN.md` file served as the guiding document throughout development:
+
+- **Vision reference** - Contains the overall architecture, data models, and API surface
+- **Progress tracking** - Each phase has checkboxes and "Completed" sections showing what was built
+- **Context restoration** - After `/compact`, Claude reads PLAN.md to understand project state
+- **Scope enforcement** - "In Scope" vs "Out of Scope" sections prevent feature creep
+
+### Phase-by-Phase Development Cycle
+
+Each phase followed this workflow:
+
+```
+1. /compact          - Summarize and clear conversation history
+2. qnew              - Refresh Claude on CLAUDE.md best practices
+3. Enter plan mode   - Design implementation approach before coding
+4. Implement         - TDD: write failing tests, then implementation
+5. qcheck            - Verify code against best practices checklists
+6. qgit              - Commit with conventional commit format
+```
+
+### CLAUDE.md Shortcuts
+
+The project uses a `CLAUDE.md` file with custom shortcuts to standardize interactions:
+
+| Shortcut | Purpose |
+|----------|---------|
+| `qnew` | Load best practices into context |
+| `qplan` | Verify plan consistency with codebase |
+| `qcode` | Implement and run tests |
+| `qcheck` | Review code against all checklists |
+| `qcheckf` | Review functions only |
+| `qcheckt` | Review tests only |
+| `qux` | Generate UX test scenarios |
+| `qgit` | Stage, commit, and push |
+
+### Best Practices Enforced
+
+The CLAUDE.md file codifies development standards:
+
+- **TDD required** - Stub -> failing test -> implementation
+- **Colocated tests** - `*.spec.ts` files next to source
+- **Type-only imports** - `import type { ... }` for types
+- **Minimal extraction** - Don't create functions unless reused or necessary for testing
+- **Conventional commits** - Structured commit messages
+
+### Context Management
+
+To work within AI context limits:
+
+- `/compact` after completing each phase to summarize history
+- Keep phases small enough to complete in one session
+- Reference PLAN.md for phase requirements rather than re-explaining
+- Use plan mode to think through implementation before writing code
+
+---
+
 ## Development Prompts
 
 ### Phase 0 - Project Setup
@@ -199,4 +269,12 @@ NORMALIZATION:
 
 ## Prompt Design Notes
 
-<!-- TODO: Add notes on prompt engineering decisions, what worked, what didn't -->
+### Key Decisions
+
+1. **Strict JSON output for reviews**: The `REVIEW_PROMPT` enforces JSON-only output to enable structured parsing. This required explicit "no markdown, no prose" instructions.
+
+2. **Sensitivity tuning for TODOs**: The `TODO_EXTRACT_PROMPT` includes a "sensitivity rule" to capture concrete recommendations even without explicit "TODO" markers, balancing comprehensiveness with accuracy.
+
+3. **Constraint-heavy system prompt**: The main `SYSTEM_PROMPT` emphasizes what the assistant *cannot* do (see files, run code, invent APIs) to prevent hallucination in pair programming context.
+
+4. **Output format templates**: Providing explicit A/B/C format templates in the system prompt helps the model choose appropriate response structure based on user intent.
