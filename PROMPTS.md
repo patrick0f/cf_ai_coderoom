@@ -74,23 +74,6 @@ To work within AI context limits:
 
 ---
 
-## Development Prompts
-
-### Phase 0 - Project Setup
-
-**Prompt 1: Initial Planning & Structure**
-```
-Context: Starting a Cloudflare AI challenge project
-Task: Set up monorepo structure for a realtime pair programming app
-
-Asked Claude to:
-- Explain monorepo vs separate projects pros/cons
-- Create clean README with placeholders
-- Move detailed plan to PLAN.md
-- Set up TypeScript Worker + React/Vite frontend structure
-```
-
----
 
 ## Runtime Prompts (Used in the Application)
 
